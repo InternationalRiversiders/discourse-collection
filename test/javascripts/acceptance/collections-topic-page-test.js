@@ -1,0 +1,394 @@
+import { click, settled, visit } from "@ember/test-helpers";
+import { test } from "qunit";
+import { cloneJSON } from "discourse/lib/object";
+import topicFixtures from "discourse/tests/fixtures/topic";
+import { acceptance } from "discourse/tests/helpers/qunit-helpers";
+import { i18n } from "discourse-i18n";
+
+const TOPIC_URL = "/t/internationalization-localization/280";
+
+const COLLECTED = ".collection-topic-chips:not(.-featured)";
+const FEATURED = ".collection-topic-chips.-featured";
+const CHIP = ".collection-topic-chips__chip";
+const LABEL = ".collection-topic-chips__label";
+const MENU_BUTTON = ".post-action-menu__collection";
+const SHOW_MORE = ".post-controls .show-more-actions";
+
+// The reverse lookup the server injects onto /t/:id.json (docs/07): the
+// topic level `collections` (id+name) plus `selected_by_collection_ids` on the
+// posts some collection features. Names live on the topic level only.
+const COLLECTIONS = [
+  { id: 12, name: "Riverside reads" },
+  { id: 30, name: "Quotes" },
+];
+
+function collectionShape(id, name, overrides = {}) {
+  return {
+    id,
+    name,
+    description: "",
+    topic_count: 3,
+    owner: { id: 19, username: "eviltrout", name: "Robin Ward" },
+    teamworker_count: 0,
+    subscriber_count: 0,
+    is_teamworker: false,
+    is_subscribed: false,
+    created_at: "2026-01-02T03:04:05.000Z",
+    updated_at: "2026-01-02T03:04:05.000Z",
+    last_topic_added_at: "2026-06-01T01:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function replyId() {
+  return topicFixtures["/t/280/1.json"].post_stream.posts.find(
+    (post) => post.post_number === 2
+  ).id;
+}
+
+function topicPayload() {
+  const topic = cloneJSON(topicFixtures["/t/280/1.json"]);
+  topic.collections = COLLECTIONS;
+
+  const reply = topic.post_stream.posts.find((post) => post.post_number === 2);
+  reply.selected_by_collection_ids = [30];
+
+  return topic;
+}
+
+async function openManager(postNumber) {
+  await click(`#post_${postNumber} ${SHOW_MORE}`);
+  await click(`#post_${postNumber} ${MENU_BUTTON}`);
+  await settled();
+}
+
+async function clickRowAction(collectionId) {
+  await click(
+    `[data-collection-id="${collectionId}"] .add-to-collection__action`
+  );
+  await settled();
+}
+
+async function acceptDialog(selector = ".dialog-footer .btn-primary") {
+  await click(selector);
+  await settled();
+}
+
+acceptance("Collections topic page reverse lookup", function (needs) {
+  const requests = { posted: [], removed: [], patched: [] };
+
+  needs.hooks.beforeEach(() => {
+    requests.posted = [];
+    requests.removed = [];
+    requests.patched = [];
+  });
+
+  needs.user();
+  needs.settings({
+    collection_enabled: true,
+    // The entry leans on a populated collapsed region, which is what core's
+    // default ships; spelled out so the dependency is visible here.
+    post_menu_hidden_items: "flag|bookmark|edit|delete|admin",
+  });
+
+  needs.pretender((server, helper) => {
+    const payload = () => helper.response(topicPayload());
+
+    server.get("/t/280.json", payload);
+    server.get("/t/280/:post_number.json", payload);
+
+    server.get("/collections/mine.json", () =>
+      helper.response({
+        collections: [
+          collectionShape(12, "Riverside reads"),
+          // Also holds this topic, and features the reply below.
+          collectionShape(30, "Quotes"),
+          collectionShape(40, "Morning links", { topic_count: 0 }),
+        ],
+        meta: { page: 0, page_size: 30, more: false, total: 3 },
+      })
+    );
+
+    server.post("/collections/:id/topics.json", (request) => {
+      requests.posted.push(request.params.id);
+      return helper.response(
+        collectionShape(Number(request.params.id), "Morning links")
+      );
+    });
+
+    server.delete("/collections/:id/topics/:topic_id.json", (request) => {
+      requests.removed.push(request.params.id);
+      return helper.response(
+        collectionShape(Number(request.params.id), "Quotes")
+      );
+    });
+
+    server.patch("/collections/:id/topics/:topic_id.json", (request) => {
+      const body = new URLSearchParams(request.requestBody);
+      const mode = body.has("selected_replies[add][]") ? "add" : "remove";
+
+      requests.patched.push({
+        id: request.params.id,
+        mode,
+        postIds: body.getAll(`selected_replies[${mode}][]`),
+      });
+
+      return helper.response({
+        added_at: "2026-06-01T01:00:00.000Z",
+        note: "",
+        topic: { id: Number(request.params.topic_id) },
+        selected_replies: [],
+      });
+    });
+  });
+
+  test("lists the collections holding the topic", async function (assert) {
+    await visit(TOPIC_URL);
+    await settled();
+
+    assert
+      .dom(`div.post__contents > ${COLLECTED}`)
+      .exists("the chips sit inside the first post's contents");
+    assert
+      .dom(`${COLLECTED} ${LABEL}`)
+      .hasText(i18n("collections.topic.collected_in"));
+    assert
+      .dom(`${COLLECTED} ${CHIP}`)
+      .exists({ count: 2 }, "one chip per collection");
+    assert
+      .dom(`${COLLECTED} ${CHIP}`)
+      .hasText("Riverside reads Quotes", "chips carry names only");
+    assert
+      .dom(".collection-topic-chips__add")
+      .doesNotExist("the chips carry no inline action");
+  });
+
+  test("links each chip to its collection", async function (assert) {
+    await visit(TOPIC_URL);
+    await settled();
+
+    assert
+      .dom(`${COLLECTED} ${CHIP}`)
+      .hasAttribute("href", "/collections/12", "links to the collection");
+  });
+
+  test("lists the featuring collections on the reply", async function (assert) {
+    await visit(TOPIC_URL);
+    await settled();
+
+    assert.dom(FEATURED).exists("the featured set renders on its own");
+    assert
+      .dom(`${FEATURED} ${LABEL}`)
+      .hasText(i18n("collections.topic.featured_in"));
+    assert
+      .dom(`${FEATURED} ${CHIP}`)
+      .exists({ count: 1 }, "resolved against the topic level name table");
+    assert.dom(`${FEATURED} ${CHIP}`).hasText("Quotes");
+  });
+
+  test("keeps the entry behind the more toggle on every post", async function (assert) {
+    await visit(TOPIC_URL);
+    await settled();
+
+    assert
+      .dom(`#post_1 ${MENU_BUTTON}`)
+      .doesNotExist("the first post starts without it");
+    assert
+      .dom(`#post_2 ${MENU_BUTTON}`)
+      .doesNotExist("a reply starts without it");
+
+    await click(`#post_1 ${SHOW_MORE}`);
+
+    assert.dom(`#post_1 ${MENU_BUTTON}`).exists("the first post reveals it");
+    assert
+      .dom(`#post_1 ${MENU_BUTTON} use`)
+      .hasAttribute("href", "#collection", "it wears the plugin's own icon");
+
+    await click(`#post_2 ${SHOW_MORE}`);
+
+    assert.dom(`#post_2 ${MENU_BUTTON}`).exists("a reply reveals it");
+  });
+
+  test("collects the topic after confirming", async function (assert) {
+    await visit(TOPIC_URL);
+    await settled();
+    await openManager(1);
+
+    assert
+      .dom(".add-to-collection__row")
+      .exists({ count: 3 }, "lists my collections");
+    assert
+      .dom('[data-collection-id="12"] .add-to-collection__action')
+      .hasText(i18n("collections.topic.uncollect"), "a held topic can be freed");
+    // 30 also features one of the topic's replies, which must not turn the row into
+    // a feature toggle: the first post only ever manages its topic.
+    assert
+      .dom('[data-collection-id="30"] .add-to-collection__action')
+      .hasText(i18n("collections.topic.uncollect"));
+    assert
+      .dom('[data-collection-id="40"] .add-to-collection__action')
+      .hasText(i18n("collections.topic.collect"));
+
+    await clickRowAction(40);
+
+    assert.dom(".dialog-body").exists("the action confirms first");
+    assert.deepEqual(requests.posted, [], "nothing is sent before confirming");
+
+    await acceptDialog();
+
+    assert.deepEqual(requests.posted, ["40"], "posts the picked collection");
+    assert.dom(".add-to-collection").exists("the manager stays open");
+    assert
+      .dom(`${COLLECTED} ${CHIP}`)
+      .exists({ count: 3 }, "the new chip appears without reloading the topic");
+    assert.dom(COLLECTED).containsText("Morning links");
+  });
+
+  test("un-collects the topic and drops its featured replies", async function (assert) {
+    await visit(TOPIC_URL);
+    await settled();
+    await openManager(1);
+
+    await clickRowAction(30);
+    await acceptDialog(".dialog-footer .btn-danger");
+
+    assert.deepEqual(requests.removed, ["30"], "deletes the membership");
+    assert
+      .dom(`${COLLECTED} ${CHIP}`)
+      .exists({ count: 1 }, "the chip goes from the first post");
+    assert
+      .dom(FEATURED)
+      .doesNotExist("the reply loses the collection featuring it");
+  });
+
+  test("features and unfeatures a reply", async function (assert) {
+    await visit(TOPIC_URL);
+    await settled();
+    await openManager(2);
+
+    assert
+      .dom('[data-collection-id="40"] .add-to-collection__hint')
+      .hasText(i18n("collections.topic.feature_requires_topic"));
+    assert
+      .dom('[data-collection-id="40"] .add-to-collection__action')
+      .isDisabled("a topic that is not collected cannot be featured");
+    assert
+      .dom('[data-collection-id="30"] .add-to-collection__action')
+      .hasText(i18n("collections.topic.unfeature"));
+
+    await clickRowAction(12);
+    await acceptDialog();
+
+    assert.deepEqual(
+      requests.patched,
+      [{ id: "12", mode: "add", postIds: [String(replyId())] }],
+      "patches the reply into the collection"
+    );
+    assert
+      .dom(`${FEATURED} ${CHIP}`)
+      .exists({ count: 2 }, "the reply gains a chip without a refetch");
+
+    await clickRowAction(30);
+    await acceptDialog(".dialog-footer .btn-danger");
+
+    assert.deepEqual(requests.patched[1], {
+      id: "30",
+      mode: "remove",
+      postIds: [String(replyId())],
+    });
+    assert
+      .dom(`${FEATURED} ${CHIP}`)
+      .exists({ count: 1 }, "the reply loses the chip again");
+  });
+});
+
+acceptance("Collections topic page — entry gates", function (needs) {
+  // Staff so the whisper below renders at all, and so the post menu is fully built
+  // for every post in the stream.
+  needs.user({ admin: true, staff: true });
+  needs.settings({
+    collection_enabled: true,
+    post_menu_hidden_items: "flag|bookmark|edit|delete|admin",
+  });
+
+  needs.pretender((server, helper) => {
+    const whisperPayload = () => {
+      const topic = topicPayload();
+      // Post types are regular 1 / moderator action 2 / small action 3 / whisper 4.
+      // The write endpoints only take regular posts, so no other type gets an entry.
+      topic.post_stream.posts.find(
+        (post) => post.post_number === 2
+      ).post_type = 4;
+      return helper.response(topic);
+    };
+
+    server.get("/t/280.json", whisperPayload);
+    server.get("/t/280/:post_number.json", whisperPayload);
+
+    const pmPayload = () =>
+      helper.response(cloneJSON(topicFixtures["/t/130.json"]));
+
+    server.get("/t/130.json", pmPayload);
+    server.get("/t/130/:post_number.json", pmPayload);
+  });
+
+  test("hides the entry on a non-regular post", async function (assert) {
+    await visit(TOPIC_URL);
+    await settled();
+
+    assert.dom(`#post_2 .post-controls`).hasClass("collapsed");
+
+    await click(`#post_2 ${SHOW_MORE}`);
+
+    assert
+      .dom(`#post_2 .post-controls`)
+      .hasClass("expanded", "the action bar really did expand");
+    assert
+      .dom(`#post_2 ${MENU_BUTTON}`)
+      .doesNotExist("a whisper is never offered for featuring");
+
+    await click(`#post_1 ${SHOW_MORE}`);
+
+    assert.dom(`#post_1 ${MENU_BUTTON}`).exists("a regular post still gets it");
+  });
+
+  test("hides the entry on a private message", async function (assert) {
+    await visit("/t/130");
+    await settled();
+
+    assert.dom("#post_1 .post__menu-area").exists("the post menu renders");
+    assert
+      .dom(`#post_1 ${MENU_BUTTON}`)
+      .doesNotExist("a private message is not offered before expanding");
+
+    await click(`#post_1 ${SHOW_MORE}`);
+
+    assert
+      .dom(`#post_1 ${MENU_BUTTON}`)
+      .doesNotExist("and not after expanding either");
+  });
+});
+
+acceptance("Collections topic page — guests", function (needs) {
+  needs.settings({
+    collection_enabled: true,
+    collection_allow_anonymous: false,
+  });
+
+  needs.pretender((server, helper) => {
+    const payload = () => helper.response(topicPayload());
+
+    server.get("/t/280.json", payload);
+    server.get("/t/280/:post_number.json", payload);
+  });
+
+  test("injects nothing for a guest", async function (assert) {
+    await visit(TOPIC_URL);
+    await settled();
+
+    assert.dom(".collection-topic-chips").doesNotExist();
+    assert
+      .dom(MENU_BUTTON)
+      .doesNotExist("and no action bar entry either");
+  });
+});
