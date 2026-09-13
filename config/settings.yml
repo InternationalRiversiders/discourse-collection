@@ -1,0 +1,77 @@
+discourse_collection:
+  collection_enabled:
+    default: true
+    client: true
+  collection_allow_anonymous:
+    default: false
+    client: true
+  collection_moderators_can_manage_collections:
+    default: false
+    client: true
+  collection_create_allowed_groups:
+    default: "11" # auto group @trust_level_1
+    type: group_list
+    list_type: compact
+    allow_any: false
+    refresh: true
+    disallowed_groups: "0|4|5"
+  collection_teamworker_allowed_groups:
+    default: "11" # auto group @trust_level_1
+    type: group_list
+    list_type: compact
+    allow_any: false
+    refresh: true
+    disallowed_groups: "0|4|5"
+  collection_create_disallowed_groups:
+    default: ""
+    type: group_list
+    list_type: compact
+    allow_any: false
+    refresh: true
+    disallowed_groups: "0|4|5"
+  collection_teamworker_disallowed_groups:
+    default: ""
+    type: group_list
+    list_type: compact
+    allow_any: false
+    refresh: true
+    disallowed_groups: "0|4|5"
+  collection_max_collections_per_user:
+    default: 20
+    min: 1
+  collection_max_topics_per_collection:
+    default: 10000
+    min: 1
+  collection_max_teamworkers_per_collection:
+    default: 5
+    min: 0
+  collection_max_selected_replies_per_topic:
+    default: 3
+    min: 1
+  collection_name_min_length:
+    default: 3
+    client: true
+    validator: CollectionNameMinLengthValidator
+  collection_name_max_length:
+    default: 20
+    client: true
+    validator: CollectionNameMaxLengthValidator
+  collection_description_max_length:
+    default: 200
+    min: 0
+    max: 1000
+    client: true
+  collection_unlimited_teamworkers_role:
+    default: nobody
+    type: enum
+    enum: CollectionUnlimitedTeamworkersRoleSiteSetting
+  collection_unlimited_collections_role:
+    default: nobody
+    type: enum
+    enum: CollectionUnlimitedCollectionsRoleSiteSetting
+  collection_invite_validity_days:
+    default: 10
+    validator: CollectionInviteValidityDaysValidator
+  collection_invite_history_days:
+    default: 30
+    validator: CollectionInviteHistoryDaysValidator

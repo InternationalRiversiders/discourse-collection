@@ -1,0 +1,218 @@
+en:
+  admin_js:
+    admin:
+      logs:
+        staff_actions:
+          actions:
+            collection_name_change: "change collection name"
+            collection_intro_change: "change collection description"
+            collection_topic_note_change: "change collection topic note"
+            collection_owner_change: "change collection owner"
+            collection_invite_revoke: "revoke collection invitation"
+      site_settings:
+        categories:
+          discourse_collection: "Collections"
+  js:
+    collections:
+      nav_name: "Collections"
+      nav_title: "Browse public collections"
+      heading: "Collections"
+      subtitle: "Public topic collections across the site."
+      mine_subtitle: "Collections you own or co-maintain."
+      subscribed_subtitle: "Collections you subscribe to."
+      new_button: "New collection"
+      sort_label: "Sort collections"
+      tabs_label: "Collection lists"
+      tabs:
+        all: "All"
+        mine: "Mine"
+        subscribed: "Subscribed"
+        invites: "Invites"
+      results_total:
+        one: "%{count} collection"
+        other: "%{count} collections"
+      empty_title: "No collections yet"
+      empty: "There are no public collections yet."
+      mine_empty_title: "Nothing here yet"
+      mine_empty: "You have not created or been invited to any collection yet."
+      subscribed_empty_title: "Nothing subscribed yet"
+      subscribed_empty: "You have not subscribed to any collection yet."
+      sort:
+        created_at: "Created"
+        last_topic_added_at: "Recently updated"
+        topic_count: "Topic count"
+        subscriber_count: "Subscribers"
+      order_asc: "Ascending"
+      order_desc: "Descending"
+      owner_badge: "Owner"
+      teamworker_badge: "Maintainer"
+      no_owner: "Unclaimed"
+      no_topics_yet: "No topics yet"
+      # Prefixes for the two relative timestamps on a list tile. The "ago" part
+      # itself comes from core dates.medium_with_ago (via dFormatDate leaveAgo).
+      tile:
+        created_at: "Created"
+        last_topic_added_at: "Updated"
+      create:
+        title: "New collection"
+        name_label: "Name"
+        description_label: "Description (optional)"
+        name_constraint: "%{min}–%{max} characters"
+        description_constraint: "Up to %{max} characters"
+        cancel: "Cancel"
+        submit: "Create"
+        errors:
+          name_blank: "Enter a name."
+          name_length: "Name must be %{min}–%{max} characters."
+          description_too_long: "Description must be %{max} characters or fewer."
+      # Renaming / re-describing an existing collection (docs/05 §1). Same fields and
+      # limits as creating one, so the wording mirrors collections.create.
+      edit:
+        title: "Edit collection"
+        name_label: "Name"
+        description_label: "Description (optional)"
+        name_constraint: "%{min}–%{max} characters"
+        description_constraint: "Up to %{max} characters"
+        cancel: "Cancel"
+        submit: "Save"
+        errors:
+          name_blank: "Enter a name."
+          name_length: "Name must be %{min}–%{max} characters."
+          description_too_long: "Description must be %{max} characters or fewer."
+      detail:
+        back: "All collections"
+        created: "Created"
+        last_activity: "Last activity"
+        subscribe: "Subscribe"
+        unsubscribe: "Unsubscribe"
+        team: "Team"
+        edit: "Edit"
+        delete: "Delete"
+        confirm_delete: "Delete “%{name}”? Its collected topics and selected replies go with it."
+      # The collection's team (docs/02 §3 / docs/05 §2.1). Membership changes only
+      # through an invitation the other side accepts, so the entries here either
+      # remove someone or start that invitation.
+      team:
+        invite_maintainer: "Invite a co-maintainer"
+        invite_owner: "Transfer ownership"
+        remove: "Remove"
+        leave: "Leave"
+        confirm_remove: "Remove @%{username} as a co-maintainer of this collection?"
+        confirm_leave: "Leave this collection? You lose co-maintainer access to it."
+      invite:
+        placeholder: "Search for a user"
+        submit: "Send invitation"
+        cancel: "Cancel"
+        close: "Done"
+        maintainer:
+          title: "Invite a co-maintainer"
+          description: "They can collect topics, select replies and manage this collection once they accept."
+          sent: "Invitation sent to @%{username}. They become a co-maintainer once they accept."
+        owner:
+          title: "Transfer ownership"
+          description: "Ownership moves to the invitee once they accept; the current owner, if any, stays on as a co-maintainer."
+          sent: "Invitation sent to @%{username}. They become the owner once they accept."
+          taken_over: "You are now the owner of this collection."
+      # The invitee's side of the flow (docs/05 §2.4 / docs/05 §2.5): the inbox and
+      # the two answers to a pending invitation.
+      invites:
+        heading: "Invites"
+        subtitle: "Invitations you have received, and how you answered them."
+        empty_title: "No invitations yet"
+        empty_body: "When someone invites you to co-maintain or take over a collection, it shows up here."
+        unknown_user: "Deleted user"
+        invited_you: "invited you to become %{role}"
+        role_name:
+          maintainer: "a co-maintainer"
+          owner: "the owner"
+        expires: "Expires"
+        accept: "Accept"
+        reject: "Decline"
+        status:
+          pending: "Pending"
+          expired: "Expired"
+          accepted: "Accepted"
+          rejected: "Declined"
+        current_owner: "Current owner: @%{username}"
+        no_current_owner: "This collection has no owner"
+        confirm_accept_maintainer: "Accept? You become a co-maintainer of “%{name}”."
+        confirm_accept_owner: "Accept? You become the owner of “%{name}”; its current owner, if any, stays on as a co-maintainer."
+        confirm_reject: "Decline the invitation to “%{name}”?"
+      # The same invitations as the collection's owner, or a staff manager, reads them
+      # (docs/05 §2.3).
+      invite_records:
+        heading: "Invitations"
+        show_all: "Show all"
+        revoke: "Revoke"
+        invited: "invited"
+        to_be: "to be %{role}"
+        confirm_revoke: "Revoke the invitation to @%{username}?"
+      reading:
+        heading: "Collected topics"
+        empty_body: "Topics added to this collection appear here."
+        added: "Added"
+        note_label: "Note"
+        selected_replies: "Selected replies"
+        view_all_replies: "View all selected replies"
+        selected_replies_empty: "No visible selected replies."
+        # Managing a row from the reading page (docs/04 §4 / §5 / docs/06 §1).
+        # Removal wording carries no collection name — the page already is that one.
+        # The un-collect / unfeature labels come from collections.topic.* (the same
+        # actions as on the post action bar).
+        edit_note: "Edit note"
+        save_note: "Save"
+        cancel_note: "Cancel"
+        note_placeholder: "Add a note"
+        confirm_remove_topic: "Remove this topic from the collection? Its selected replies (if any) go with it."
+        confirm_unfeature_reply: "Unfeature this reply?"
+      # Topic page reverse lookup (docs/07). `collected_in` sits under the
+      # first post, `featured_in` under any reply some collection featured. The post
+      # action bar entry manages a topic's membership on the first post and a reply's
+      # featured state elsewhere.
+      topic:
+        collected_in: "Collected in"
+        featured_in: "Featured in"
+        menu_title: "Collections"
+        picker_title: "Add to collection"
+        feature_title: "Feature reply"
+        collect: "Collect"
+        uncollect: "Remove"
+        feature: "Feature"
+        unfeature: "Unfeature"
+        feature_requires_topic: "Collect the topic first"
+        confirm_collect: "Collect this topic into “%{name}”?"
+        confirm_uncollect: "Remove this topic from “%{name}”? Its selected replies (if any) go with it."
+        confirm_feature: "Feature this reply in “%{name}”?"
+        confirm_unfeature: "Unfeature this reply in “%{name}”?"
+        picker_empty: "You have not created or been invited to any collection yet."
+      stats:
+        topic_count: "Topics"
+        subscriber_count: "Subscribers"
+        teamworker_count: "Maintainers"
+    # Native notifications (docs/09 §1). The titles are the row's hover text; the
+    # body keys are its second line, next to the collection name (21075) or the other
+    # party's username (21076-21078) that core renders as the first line.
+    notifications:
+      titles:
+        collection_topic_added: "new topics in a collection"
+        collection_invitation: "collection invitation"
+        collection_invitation_accepted: "collection invitation accepted"
+        collection_invitation_declined: "collection invitation declined"
+      collection_topic_added: "You have updates in a collection you subscribe to"
+      collection_invitation:
+        maintainer: "invited you to become a co-maintainer of “%{collection}”"
+        owner: "invited you to become the owner of “%{collection}”"
+      collection_invitation_accepted:
+        maintainer: "accepted your invitation to become a co-maintainer of “%{collection}”"
+        owner: "accepted your invitation to become the owner of “%{collection}”"
+      collection_invitation_declined: "declined your invitation to “%{collection}”"
+    admin:
+      site_settings:
+        collection_unlimited_teamworkers_role:
+          nobody: "No one"
+          admin: "Admin"
+          staff: "Staff"
+        collection_unlimited_collections_role:
+          nobody: "No one"
+          admin: "Admin"
+          staff: "Staff"
