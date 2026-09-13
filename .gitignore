@@ -1,0 +1,5 @@
+.vscode/
+.claude/*
+!.claude/skills/
+temp.*
+references/private/
