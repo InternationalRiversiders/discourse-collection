@@ -1,0 +1,323 @@
+import { fn } from "@ember/helper";
+import { action } from "@ember/object";
+import { LinkTo } from "@ember/routing";
+import Component from "@glimmer/component";
+import { on } from "@ember/modifier";
+import { service } from "@ember/service";
+import CollectionInviteRecords from "./collection-invite-records";
+import CollectionTopics from "./collection-topics";
+import CollectionUser from "./collection-user";
+import CollectionFormModal from "./modal/collection-form-modal";
+import CollectionInviteModal from "./modal/collection-invite-modal";
+import dFormatDate from "discourse/ui-kit/helpers/d-format-date";
+import dIcon from "discourse/ui-kit/helpers/d-icon";
+import dNumber from "discourse/ui-kit/helpers/d-number";
+import { and, eq } from "discourse/truth-helpers";
+import { i18n } from "discourse-i18n";
+import { INVITE_MAINTAINER, INVITE_OWNER } from "../lib/collection-api";
+
+export default class CollectionDetailPage extends Component {
+  @service currentUser;
+  @service modal;
+
+  // A guest has no id, and reading one off a missing currentUser is not a thing a
+  // template should do — the row comparison below reads this instead.
+  get currentUserId() {
+    return this.currentUser?.id ?? null;
+  }
+
+  get showActions() {
+    return (
+      this.args.controller.canSubscribe ||
+      this.args.controller.canManageMetadata ||
+      this.args.controller.canDeleteCollection
+    );
+  }
+
+  // An unclaimed collection with nobody on the team has no roster to show.
+  get showTeam() {
+    return (
+      !!this.args.controller.owner ||
+      this.args.controller.teamworkers.length > 0
+    );
+  }
+
+  get subscribeIcon() {
+    return this.args.controller.isSubscribed ? "bell-slash" : "bell";
+  }
+
+  get subscribeLabel() {
+    if (this.args.controller.isSubscribed) {
+      return i18n("collections.detail.unsubscribe");
+    }
+    return i18n("collections.detail.subscribe");
+  }
+
+  // docs/05 §1 — the modal writes and hands the full shape back to the controller, which
+  // mirrors the two fields the page renders.
+  @action
+  editMetadata() {
+    this.modal.show(CollectionFormModal, {
+      model: {
+        mode: "edit",
+        id: this.args.collection.id,
+        name: this.args.controller.collectionName,
+        description: this.args.controller.collectionDescription,
+        onSaved: this.args.controller.applyMetadata,
+      },
+    });
+  }
+
+  @action
+  inviteMaintainer() {
+    // Both the owner and the sitting co-maintainers already hold the role, so the
+    // chooser leaves them out rather than letting the pick end in a 422.
+    const owner = this.args.controller.owner;
+    this.modal.show(CollectionInviteModal, {
+      model: {
+        collectionId: this.args.collection.id,
+        actionType: INVITE_MAINTAINER,
+        excludedUsernames: [
+          owner?.username,
+          ...this.args.controller.teamworkers.map((user) => user.username),
+        ].filter(Boolean),
+        onSent: this.args.controller.loadInvites,
+      },
+    });
+  }
+
+  @action
+  inviteOwner() {
+    // The sitting owner already holds the role, so picking them is a transfer to
+    // themselves — a no-op on accept, since the same row is demoted and promoted back.
+    // Staff open this on collections they do not own, so the owner — not the viewer —
+    // is the one to leave out; everyone else, the viewer included, stays eligible: for
+    // staff picking themselves is a takeover that lands on the spot (docs/05 §2.7).
+    const owner = this.args.controller.owner;
+    this.modal.show(CollectionInviteModal, {
+      model: {
+        collectionId: this.args.collection.id,
+        actionType: INVITE_OWNER,
+        excludedUsernames: [owner?.username].filter(Boolean),
+        onSent: this.args.controller.loadInvites,
+        onTakenOver: this.args.controller.applyOwnership,
+      },
+    });
+  }
+
+  <template>
+    <section class="collection-detail">
+      <div class="container">
+        <nav class="collection-detail__nav">
+          <LinkTo class="collection-detail__back" @route="collections">
+            {{dIcon "chevron-left"}}
+            {{i18n "collections.detail.back"}}
+          </LinkTo>
+        </nav>
+
+        <header class="collection-detail__header">
+          <div class="collection-detail__heading">
+            <h1 class="collection-detail__name">{{@controller.collectionName}}</h1>
+            {{#if @controller.roleLabel}}
+              <span class="collection-detail__role {{@controller.roleClass}}">
+                {{@controller.roleLabel}}
+              </span>
+            {{/if}}
+          </div>
+
+          {{#if @controller.owner}}
+            <div class="collection-detail__owner">
+              <CollectionUser
+                class="collection-user-link"
+                @hideTitle={{true}}
+                @user={{@controller.owner}}
+              />
+            </div>
+          {{else}}
+            <p class="collection-detail__owner -unclaimed">
+              {{i18n "collections.no_owner"}}
+            </p>
+          {{/if}}
+
+          {{#if @controller.collectionDescription}}
+            <p class="collection-detail__description">
+              {{@controller.collectionDescription}}
+            </p>
+          {{/if}}
+
+          <dl class="collection-detail__stats">
+            <div class="collection-detail__stat">
+              <dt>{{i18n "collections.stats.topic_count"}}</dt>
+              <dd>{{dNumber @controller.topicCount}}</dd>
+            </div>
+            <div class="collection-detail__stat">
+              <dt>{{i18n "collections.stats.subscriber_count"}}</dt>
+              <dd>{{dNumber @controller.subscriberCount}}</dd>
+            </div>
+            <div class="collection-detail__stat">
+              <dt>{{i18n "collections.detail.created"}}</dt>
+              <dd>
+                {{dFormatDate
+                  @collection.created_at
+                  format="medium"
+                  leaveAgo="true"
+                }}
+              </dd>
+            </div>
+            {{#if @controller.lastTopicAddedAt}}
+              <div class="collection-detail__stat">
+                <dt>{{i18n "collections.detail.last_activity"}}</dt>
+                <dd>
+                  {{dFormatDate
+                    @controller.lastTopicAddedAt
+                    format="medium"
+                    leaveAgo="true"
+                  }}
+                </dd>
+              </div>
+            {{/if}}
+          </dl>
+        </header>
+
+        {{#if this.showActions}}
+          <div class="collection-detail__actions">
+            {{#if @controller.canSubscribe}}
+              <button
+                type="button"
+                class="btn btn-primary collection-detail__subscribe"
+                disabled={{@controller.toggling}}
+                {{on "click" @controller.toggleSubscription}}
+              >
+                {{dIcon this.subscribeIcon}}
+                {{this.subscribeLabel}}
+              </button>
+            {{/if}}
+
+            {{#if @controller.canManageMetadata}}
+              <button
+                type="button"
+                class="btn collection-detail__edit"
+                {{on "click" this.editMetadata}}
+              >
+                {{dIcon "pencil"}}
+                {{i18n "collections.detail.edit"}}
+              </button>
+            {{/if}}
+
+            {{#if @controller.canInviteMaintainer}}
+              <button
+                type="button"
+                class="btn collection-detail__invite-maintainer"
+                {{on "click" this.inviteMaintainer}}
+              >
+                {{dIcon "user-plus"}}
+                {{i18n "collections.team.invite_maintainer"}}
+              </button>
+            {{/if}}
+
+            {{#if @controller.canInviteOwner}}
+              <button
+                type="button"
+                class="btn collection-detail__invite-owner"
+                {{on "click" this.inviteOwner}}
+              >
+                {{dIcon "user-shield"}}
+                {{i18n "collections.team.invite_owner"}}
+              </button>
+            {{/if}}
+
+            {{#if @controller.canDeleteCollection}}
+              <button
+                type="button"
+                class="btn btn-danger collection-detail__delete"
+                disabled={{@controller.deleting}}
+                {{on "click" @controller.destroyCollection}}
+              >
+                {{dIcon "trash-can"}}
+                {{i18n "collections.detail.delete"}}
+              </button>
+            {{/if}}
+          </div>
+        {{/if}}
+
+        {{#if this.showTeam}}
+          <section class="collection-detail__team">
+            <h2 class="collection-detail__subheading">
+              {{i18n "collections.detail.team"}}
+            </h2>
+            <ul class="collection-detail__team-list">
+              {{#if @controller.owner}}
+                <li class="collection-detail__team-member -owner">
+                  <CollectionUser
+                    class="collection-user-link"
+                    @hideTitle={{true}}
+                    @user={{@controller.owner}}
+                  />
+                  <span class="collection-detail__team-badge">
+                    {{i18n "collections.owner_badge"}}
+                  </span>
+                </li>
+              {{/if}}
+
+              {{#each @controller.teamworkers as |maintainer|}}
+                <li
+                  class="collection-detail__team-member"
+                  data-username={{maintainer.username}}
+                >
+                  <CollectionUser
+                    class="collection-user-link"
+                    @hideTitle={{true}}
+                    @user={{maintainer}}
+                  />
+                  <span class="collection-detail__team-badge">
+                    {{i18n "collections.teamworker_badge"}}
+                  </span>
+
+                  {{#if @controller.canManageMaintainers}}
+                    <button
+                      type="button"
+                      class="btn btn-danger btn-small collection-detail__team-action"
+                      disabled={{eq
+                        @controller.pendingMaintainerId
+                        maintainer.id
+                      }}
+                      {{on
+                        "click"
+                        (fn @controller.removeMaintainer maintainer)
+                      }}
+                    >
+                      {{i18n "collections.team.remove"}}
+                    </button>
+                  {{else if
+                    (and
+                      @controller.canLeaveCollection
+                      (eq maintainer.id this.currentUserId)
+                    )
+                  }}
+                    <button
+                      type="button"
+                      class="btn btn-danger btn-small collection-detail__team-action"
+                      disabled={{eq
+                        @controller.pendingMaintainerId
+                        maintainer.id
+                      }}
+                      {{on "click" @controller.leaveCollection}}
+                    >
+                      {{i18n "collections.team.leave"}}
+                    </button>
+                  {{/if}}
+                </li>
+              {{/each}}
+            </ul>
+          </section>
+        {{/if}}
+
+        {{#if @controller.showInviteRecords}}
+          <CollectionInviteRecords @controller={{@controller}} />
+        {{/if}}
+
+        <CollectionTopics @collection={{@collection}} @controller={{@controller}} />
+      </div>
+    </section>
+  </template>
+}
