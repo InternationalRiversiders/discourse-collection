@@ -143,6 +143,7 @@
 
   &__name {
     margin: 0;
+    overflow-wrap: anywhere;
   }
 
   &__role {
@@ -168,6 +169,7 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     margin: 0;
+    overflow-wrap: anywhere;
     color: var(--primary-high);
   }
 
@@ -340,6 +342,7 @@
     color: var(--primary);
     font-weight: 700;
     text-decoration: none;
+    overflow-wrap: anywhere;
 
     &:hover {
       color: var(--tertiary);
@@ -502,6 +505,7 @@
 
   &__name {
     margin: 0;
+    overflow-wrap: anywhere;
   }
 
   &__role {
@@ -535,6 +539,7 @@
 
   &__description {
     color: var(--primary-high);
+    overflow-wrap: anywhere;
   }
 
   &__actions {
@@ -687,6 +692,7 @@
     color: var(--primary);
     font-weight: 700;
     text-decoration: none;
+    overflow-wrap: anywhere;
 
     &:hover {
       color: var(--tertiary);
@@ -732,6 +738,7 @@
     margin: 0;
     color: var(--primary-high);
     text-decoration: none;
+    overflow-wrap: anywhere;
 
     &:hover {
       color: var(--primary);
@@ -745,6 +752,7 @@
     border-radius: 4px;
     background: var(--primary-low);
     color: var(--primary-high);
+    overflow-wrap: anywhere;
   }
 
   &__note-label {
@@ -880,6 +888,7 @@
     border-radius: 100px;
     color: var(--primary-high);
     text-decoration: none;
+    overflow-wrap: anywhere;
 
     &:hover {
       border-color: var(--tertiary);
