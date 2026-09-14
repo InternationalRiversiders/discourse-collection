@@ -38,6 +38,10 @@ export default class CollectionsShowRoute extends DiscourseRoute {
       owner: model.owner,
       teamworkers: model.teamworkers,
       pendingMaintainerId: null,
+      // The owner's other collections (docs/03 §4) arrive with the model: the page only
+      // renders them, the modal fetches the full list itself.
+      ownerCollections: model.owner_collections ?? [],
+      hasMoreOwnerCollections: model.has_more_owner_collections ?? false,
       // The invitation record (docs/05 §2.3), reseeded per :id like the feed; loadInvites()
       // is a no-op for a viewer who may not read it.
       invites: [],

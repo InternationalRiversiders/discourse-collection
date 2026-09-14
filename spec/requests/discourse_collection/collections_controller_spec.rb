@@ -267,12 +267,86 @@ RSpec.describe DiscourseCollection::CollectionsController do
         payload = response.parsed_body
         expect(payload["owner"]).to be_nil
         expect(payload["teamworkers"]).to eq([])
+        expect(payload.key?("owner_collections")).to eq(false)
       end
 
       it "returns a 404 for a missing collection" do
         get "/collections/999999.json"
 
         expect(response.status).to eq(404)
+      end
+
+      describe "the owner's other collections" do
+        let(:now) { Time.zone.now }
+
+        def owner_collection_ids
+          response.parsed_body["owner_collections"].map { |row| row["id"] }
+        end
+
+        it "puts owned collections before co-maintained ones, newest added topic first within each group" do
+          owned_newer = build_collection(name: "Owned newer", owner: other_user, last_topic_added_at: now - 1.day)
+          owned_older = build_collection(name: "Owned older", owner: other_user, last_topic_added_at: now - 3.days)
+          owned_never = build_collection(name: "Owned never", owner: other_user)
+          maintained_newer = build_collection(name: "Maintained newer", last_topic_added_at: now)
+          maintained_never = build_collection(name: "Maintained never")
+          add_co_worker(maintained_newer, other_user)
+          add_co_worker(maintained_never, other_user)
+
+          get "/collections/#{collection.id}.json"
+
+          expect(response.status).to eq(200)
+          # maintained_newer is the most recently added of them all, yet it still sorts
+          # after every owned collection: the owner group leads (docs/03 §4).
+          expect(owner_collection_ids).to eq(
+            [owned_newer.id, owned_older.id, owned_never.id, maintained_newer.id, maintained_never.id],
+          )
+        end
+
+        it "leaves out the collection being viewed" do
+          # Without a sibling the key is omitted outright, which would make the
+          # exclusion unobservable (see "omits both keys ...").
+          sibling = build_collection(name: "Owned", owner: other_user, last_topic_added_at: now)
+
+          get "/collections/#{collection.id}.json"
+
+          expect(owner_collection_ids).to eq([sibling.id])
+        end
+
+        it "carries id and name only" do
+          build_collection(name: "Owned", owner: other_user, last_topic_added_at: now)
+
+          get "/collections/#{collection.id}.json"
+
+          expect(response.parsed_body["owner_collections"].first.keys).to contain_exactly("id", "name")
+        end
+
+        it "caps the list at collection_max_owner_collections_per_detail and flags the rest" do
+          SiteSetting.collection_max_owner_collections_per_detail = 2
+          3.times do |index|
+            build_collection(name: "Owned #{index}", owner: other_user, last_topic_added_at: now - index.days)
+          end
+
+          get "/collections/#{collection.id}.json"
+
+          expect(response.parsed_body["owner_collections"].length).to eq(2)
+          expect(response.parsed_body["has_more_owner_collections"]).to eq(true)
+        end
+
+        it "omits the flag when the list fits" do
+          build_collection(name: "Owned", owner: other_user, last_topic_added_at: now)
+
+          get "/collections/#{collection.id}.json"
+
+          expect(response.parsed_body["owner_collections"].length).to eq(1)
+          expect(response.parsed_body.key?("has_more_owner_collections")).to eq(false)
+        end
+
+        it "omits both keys when the owner has no other collections" do
+          get "/collections/#{collection.id}.json"
+
+          expect(response.parsed_body.key?("owner_collections")).to eq(false)
+          expect(response.parsed_body.key?("has_more_owner_collections")).to eq(false)
+        end
       end
     end
 

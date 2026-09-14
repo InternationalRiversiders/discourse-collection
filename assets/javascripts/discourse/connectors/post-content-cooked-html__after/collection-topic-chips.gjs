@@ -1,6 +1,6 @@
 import Component from "@glimmer/component";
-import { LinkTo } from "@ember/routing";
 import { i18n } from "discourse-i18n";
+import CollectionChips from "../../components/collection-chips";
 
 // Topic-page reverse lookup (docs/07), rendered inside a post's
 // `.post__contents` right under the cooked HTML. Read-only: the first post carries
@@ -58,35 +58,19 @@ export default class CollectionTopicChips extends Component {
   <template>
     {{#if this.showCollectedChips}}
       <div class="collection-topic-chips">
-        <span class="collection-topic-chips__label">
-          {{i18n "collections.topic.collected_in"}}
-        </span>
-        {{#each this.topicCollections as |collection|}}
-          <LinkTo
-            class="collection-topic-chips__chip"
-            @route="collectionsShow"
-            @model={{collection.id}}
-          >
-            {{collection.name}}
-          </LinkTo>
-        {{/each}}
+        <CollectionChips
+          @label={{i18n "collections.topic.collected_in"}}
+          @collections={{this.topicCollections}}
+        />
       </div>
     {{/if}}
 
     {{#if this.showFeaturedChips}}
       <div class="collection-topic-chips -featured">
-        <span class="collection-topic-chips__label">
-          {{i18n "collections.topic.featured_in"}}
-        </span>
-        {{#each this.featuredCollections as |collection|}}
-          <LinkTo
-            class="collection-topic-chips__chip"
-            @route="collectionsShow"
-            @model={{collection.id}}
-          >
-            {{collection.name}}
-          </LinkTo>
-        {{/each}}
+        <CollectionChips
+          @label={{i18n "collections.topic.featured_in"}}
+          @collections={{this.featuredCollections}}
+        />
       </div>
     {{/if}}
   </template>

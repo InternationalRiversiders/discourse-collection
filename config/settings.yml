@@ -53,6 +53,9 @@ discourse_collection:
   collection_max_selected_replies_per_topic:
     default: 3
     min: 1
+  collection_max_owner_collections_per_detail:
+    default: 10
+    min: 1
   collection_name_min_length:
     default: 3
     client: true

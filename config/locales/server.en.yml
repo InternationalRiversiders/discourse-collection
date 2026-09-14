@@ -13,6 +13,7 @@ en:
     collection_max_topics_per_collection: "Maximum number of topics a single collection can contain."
     collection_max_teamworkers_per_collection: "Maximum number of co-maintainers a collection can have, not counting its owner. Set to 0 to disallow co-maintainers."
     collection_max_selected_replies_per_topic: "Maximum number of featured replies returned inline with each topic on a collection reading page. When a topic has more, clients page through the rest via a dedicated endpoint."
+    collection_max_owner_collections_per_detail: "Maximum number of the collection owner's other collections returned inline on the collection detail page. When the owner has more, clients open the full list of the user's collections."
     collection_name_min_length: "Minimum collection name length, in characters."
     collection_name_max_length: "Maximum collection name length, in characters. Cannot exceed 100."
     collection_description_max_length: "Maximum collection description length, in characters. Cannot exceed 1000."

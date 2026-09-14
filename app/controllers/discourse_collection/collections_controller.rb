@@ -28,9 +28,27 @@ module DiscourseCollection
       render_collection_list(scope)
     end
 
-    # docs/03 §4 GET /collections/:id.json — full collection shape (owner may be null).
+    # docs/03 §4 GET /collections/:id.json — full collection shape (owner may be null), plus
+    # the owner's other collections. Those two extra keys belong to this endpoint alone, so
+    # they are merged here rather than in collection_full_json (shared with the write paths).
     def show
-      render_collection_full(find_collection(params[:id]))
+      collection = find_collection(params[:id])
+      payload = collection_full_json(collection)
+      # The owner sits on the partial unique index over (collection_id) WHERE is_owner, so
+      # this is one indexed lookup and loads no User.
+      owner_id = CollectionTeamworker.find_by(collection_id: collection.id, is_owner: true)&.user_id
+
+      if owner_id
+        cap = SiteSetting.collection_max_owner_collections_per_detail
+        # One extra row is the probe: rows.size > cap means "there is more" (docs/03 §4).
+        rows = Collection.other_collections_for_user(owner_id, exclude_id: collection.id, limit: cap + 1)
+        if rows.any?
+          payload[:owner_collections] = rows.first(cap).map { |row| { id: row.id, name: row.name } }
+        end
+        payload[:has_more_owner_collections] = true if rows.size > cap
+      end
+
+      render json: payload
     end
 
     # docs/04 §6 GET /collections/mine.json — collections where the current user is owner or

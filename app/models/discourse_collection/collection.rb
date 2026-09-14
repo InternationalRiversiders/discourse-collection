@@ -50,6 +50,28 @@ module DiscourseCollection
       CollectionSubscriber.where(user_id: user.id, collection_id: ids).pluck(:collection_id)
     end
 
+    # The user's other collections (docs/03 §4), as rows carrying only id and name:
+    # the ones they own first, then the ones they co-maintain, each group ordered by
+    # most recently added topic (NULL = never collected, sorts last). Collections.id
+    # breaks ties so the cap always cuts the same way.
+    #
+    # is_owner leads the ordering so one LIMIT fills the owner group before the
+    # co-maintainer group. The join runs over collection_teamworkers' real composite
+    # key and is pinned to a single user, so an inner join cannot multiply rows.
+    def self.other_collections_for_user(user_id, exclude_id:, limit:)
+      joins(:teamworkers)
+        .where(collection_teamworkers: { user_id: user_id })
+        .where.not(id: exclude_id)
+        .order(
+          Arel.sql(
+            "collection_teamworkers.is_owner DESC, " \
+              "collections.last_topic_added_at DESC NULLS LAST, collections.id ASC",
+          ),
+        )
+        .limit(limit)
+        .select(:id, :name)
+    end
+
     # --- topic_count / last_topic_added_at maintenance (docs/08) ---
     #
     # Single implementation point for the counters that the topic write paths (docs/04 §3

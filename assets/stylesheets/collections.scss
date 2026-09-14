@@ -640,6 +640,12 @@
     margin-top: 1.5rem;
   }
 
+  // The owner's other collections, between the team record and the reading feed.
+  &__owner-collections {
+    margin-top: 1.5rem;
+    font-size: var(--font-down-1);
+  }
+
   &__team-list {
     display: flex;
     flex-wrap: wrap;
@@ -943,18 +949,15 @@
   }
 }
 
-// Topic page reverse lookup chips (docs/07), injected under a post's cooked
-// content. The featured variant sits on ordinary replies and stays a step smaller
-// than the collection set under the first post.
-.collection-topic-chips {
-  padding: 4px var(--topic-body-width-padding);
+// A row of collection chips (components/collection-chips.gjs): an optional label, one pill
+// per collection, and whatever the caller yields after them. The row owns its layout and
+// the pill look only — spacing, borders and font size belong to the page wrapping it,
+// which is how the same component serves the topic page and the collection page.
+.collection-chips {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.4rem;
-  margin-top: 8px;
-  border-top: 1px solid var(--primary-low);
-  font-size: var(--font-down-1);
 
   &__label {
     color: var(--primary-medium);
@@ -977,6 +980,16 @@
       color: var(--tertiary);
     }
   }
+}
+
+// Topic page reverse lookup chips (docs/07), injected under a post's cooked
+// content. The featured variant sits on ordinary replies and stays a step smaller
+// than the collection set under the first post.
+.collection-topic-chips {
+  padding: 4px var(--topic-body-width-padding);
+  margin-top: 8px;
+  border-top: 1px solid var(--primary-low);
+  font-size: var(--font-down-1);
 
   &.-featured {
     margin-top: 0.35rem;
@@ -1163,6 +1176,13 @@
     margin: 0;
     color: var(--primary-medium);
   }
+}
+
+// Everything one user created or maintains, opened from the owner chips block on a
+// collection page. The tiles are the list page's, grid class included; only the outer
+// spacing is ours.
+.collection-owner-collections {
+  margin-top: 0.25rem;
 }
 
 // Card for a `/collections/:id` link that occupies a line of its own (docs/12 §2). The

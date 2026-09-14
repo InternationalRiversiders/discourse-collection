@@ -8,7 +8,7 @@ import { ajax } from "discourse/lib/ajax";
 export const INVITE_MAINTAINER = 0;
 export const INVITE_OWNER = 1;
 
-function pageData({ sort, order, page, page_size } = {}) {
+function pageData({ sort, order, page, page_size, username } = {}) {
   const data = {};
   if (sort) {
     data.sort = sort;
@@ -22,10 +22,16 @@ function pageData({ sort, order, page, page_size } = {}) {
   if (page_size !== undefined) {
     data.page_size = page_size;
   }
+  // Only the collection list (docs/03 §3) filters by user; the endpoints that share
+  // this helper ignore the key, so it is never sent by accident.
+  if (username) {
+    data.username = username;
+  }
   return data;
 }
 
-// docs/03 §3 all public collections.
+// docs/03 §3 all public collections; `username` narrows it to the collections that user
+// created or maintains.
 export function listCollections(options = {}) {
   return ajax("/collections.json", { data: pageData(options) });
 }

@@ -13,6 +13,7 @@ zh_CN:
     collection_max_topics_per_collection: "单个专辑最多可收录的主题数量。"
     collection_max_teamworkers_per_collection: "每个专辑除创建者外最多可拥有的共同维护者数量。设为 0 表示不允许添加共同维护者。"
     collection_max_selected_replies_per_topic: "专辑阅读页里每个话题随行内联返回的最多精选回复条数。超过时前端经专用端点翻页查看其余。"
+    collection_max_owner_collections_per_detail: "专辑详情页内联返回的、该专辑所有者其他专辑的最大数量。超过时前端打开该用户的全部专辑列表。"
     collection_name_min_length: "专辑名称的最小长度（字符数）。"
     collection_name_max_length: "专辑名称的最大长度（字符数）。不能超过 100。"
     collection_description_max_length: "专辑描述的最大长度（字符数）。不能超过 1000。"

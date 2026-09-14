@@ -48,6 +48,10 @@ export default class CollectionTile extends Component {
   // A LinkTo here would preventDefault and transition on any simple click bubbling
   // through it, swallowing the owner link nested below — core's card handler skips a
   // click someone else already handled. So the tile navigates itself.
+  //
+  // A caller that holds the tile inside a layer of its own (a modal, say) passes
+  // @onNavigate to take that layer down before the route changes; the early returns
+  // above never fire it, so a new tab or a user card leaves that layer alone.
   @action
   openCollection(event) {
     // Modified clicks and the card trigger are not ours to answer: the browser follows
@@ -57,6 +61,7 @@ export default class CollectionTile extends Component {
     }
 
     event.preventDefault();
+    this.args.onNavigate?.();
     this.router.transitionTo("collectionsShow", this.collection.id);
   }
 

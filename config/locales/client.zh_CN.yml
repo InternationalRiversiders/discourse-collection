@@ -83,6 +83,11 @@ zh_CN:
         edit: "编辑"
         delete: "删除"
         confirm_delete: "删除「%{name}」？其收录的话题与精选回复也会一并删除。"
+      owner_collections:
+        heading: "%{username} 创建或维护的其他淘专辑"
+        more: "更多"
+        details: "详情"
+        title: "%{username} 创建或维护的所有淘专辑"
       team:
         invite_maintainer: "邀请共同维护者"
         invite_owner: "转让所有权"

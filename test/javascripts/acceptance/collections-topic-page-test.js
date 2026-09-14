@@ -9,8 +9,8 @@ const TOPIC_URL = "/t/internationalization-localization/280";
 
 const COLLECTED = ".collection-topic-chips:not(.-featured)";
 const FEATURED = ".collection-topic-chips.-featured";
-const CHIP = ".collection-topic-chips__chip";
-const LABEL = ".collection-topic-chips__label";
+const CHIP = ".collection-chips__chip";
+const LABEL = ".collection-chips__label";
 const MENU_BUTTON = ".post-action-menu__collection";
 const SHOW_MORE = ".post-controls .show-more-actions";
 

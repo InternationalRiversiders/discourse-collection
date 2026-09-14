@@ -4,6 +4,7 @@ import { service } from "@ember/service";
 import { tracked } from "@glimmer/tracking";
 import { popupAjaxError } from "discourse/lib/ajax-error";
 import { i18n } from "discourse-i18n";
+import CollectionOwnerCollectionsModal from "../components/modal/collection-owner-collections-modal";
 import {
   deleteCollection,
   listCollectionInvites,
@@ -40,6 +41,7 @@ const RECENT_INVITE_ROWS = 3;
 export default class CollectionsShowController extends Controller {
   @service currentUser;
   @service dialog;
+  @service modal;
   @service router;
   @service siteSettings;
 
@@ -67,6 +69,12 @@ export default class CollectionsShowController extends Controller {
   // management entry on the page are derived from it, so a takeover (docs/05 §2.7) has to
   // move it here rather than on the unmovable route model.
   @tracked owner = null;
+
+  // The owner's other collections (docs/03 §4), as seeded by the route: a capped list of
+  // id + name, plus whether the server held more back. The page renders them as chips and
+  // opens the full list in a modal; nothing here refetches or paginates.
+  @tracked ownerCollections = [];
+  @tracked hasMoreOwnerCollections = false;
 
   // The invitation record (docs/05 §2.3) the owner or a staff manager reads below the team
   // card; a revoke drops its row.
@@ -508,6 +516,18 @@ export default class CollectionsShowController extends Controller {
   applyMetadata(collection) {
     this.collectionName = collection.name;
     this.collectionDescription = collection.description;
+  }
+
+  // The owner's full list is one modal away (docs/03 §3): it pages through the collection
+  // list filtered by that username, which the modal fetches for itself.
+  @action
+  openOwnerCollections() {
+    const username = this.owner?.username;
+    if (!username) {
+      return;
+    }
+
+    this.modal.show(CollectionOwnerCollectionsModal, { model: { username } });
   }
 
   // docs/05 §2.7 — a staff takeover answers with the collection already under its new owner,

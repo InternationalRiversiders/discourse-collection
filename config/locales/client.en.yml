@@ -89,6 +89,15 @@ en:
         edit: "Edit"
         delete: "Delete"
         confirm_delete: "Delete “%{name}”? Its collected topics and selected replies go with it."
+      # The owner's other collections (docs/03 §4), inline between the team record and
+      # the reading feed, and the modal that pages through that user's collections. The
+      # heading says "other" because the inline list leaves out the collection being read;
+      # the modal title covers the whole list, that collection included.
+      owner_collections:
+        heading: "Other collections created or maintained by %{username}"
+        more: "More"
+        details: "Details"
+        title: "All collections created or maintained by %{username}"
       # The collection's team (docs/02 §3 / docs/05 §2.1). Membership changes only
       # through an invitation the other side accepts, so the entries here either
       # remove someone or start that invitation.

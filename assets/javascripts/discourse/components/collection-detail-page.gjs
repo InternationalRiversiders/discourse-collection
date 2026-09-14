@@ -4,6 +4,7 @@ import { LinkTo } from "@ember/routing";
 import Component from "@glimmer/component";
 import { on } from "@ember/modifier";
 import { service } from "@ember/service";
+import CollectionChips from "./collection-chips";
 import CollectionInviteRecords from "./collection-invite-records";
 import CollectionTopics from "./collection-topics";
 import CollectionUser from "./collection-user";
@@ -51,6 +52,22 @@ export default class CollectionDetailPage extends Component {
       return i18n("collections.detail.unsubscribe");
     }
     return i18n("collections.detail.subscribe");
+  }
+
+  // The owner's other collections (docs/03 §4): the heading names whose list this is, and
+  // the trailing action reads "Details" when the server held nothing back — either way it
+  // opens the full list, which is where the richer tiles are.
+  get ownerCollectionsHeading() {
+    return i18n("collections.owner_collections.heading", {
+      username: this.args.controller.owner?.username,
+    });
+  }
+
+  get ownerCollectionsButtonLabel() {
+    if (this.args.controller.hasMoreOwnerCollections) {
+      return i18n("collections.owner_collections.more");
+    }
+    return i18n("collections.owner_collections.details");
   }
 
   // docs/05 §1 — the modal writes and hands the full shape back to the controller, which
@@ -314,6 +331,26 @@ export default class CollectionDetailPage extends Component {
 
         {{#if @controller.showInviteRecords}}
           <CollectionInviteRecords @controller={{@controller}} />
+        {{/if}}
+
+        {{! The owner's other collections (docs/03 §4), above the reading feed. Nothing
+        renders for an ownerless collection or an owner whose only collection is this one. }}
+        {{#if @controller.ownerCollections.length}}
+          <section class="collection-detail__owner-collections">
+            <h2 class="collection-detail__subheading">
+              {{this.ownerCollectionsHeading}}
+            </h2>
+
+            <CollectionChips @collections={{@controller.ownerCollections}}>
+              <button
+                type="button"
+                class="collection-chips__chip btn btn-primary"
+                {{on "click" @controller.openOwnerCollections}}
+              >
+                {{this.ownerCollectionsButtonLabel}}
+              </button>
+            </CollectionChips>
+          </section>
         {{/if}}
 
         <CollectionTopics @collection={{@collection}} @controller={{@controller}} />
