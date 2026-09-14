@@ -102,6 +102,9 @@ acceptance("Collections list", function (needs) {
     assert.dom(".collection-tile").containsText("Riverside gems");
     assert.dom(".collection-tile").containsText("Unclaimed box");
     assert.dom(".collection-list__total").containsText("2");
+    // The note belongs to the pages that list a single user's collections, where a role
+    // badge could be read as that user's.
+    assert.dom(".collection-role-hint").doesNotExist();
   });
 
   test("shows topic, subscriber and maintainer counts plus both timestamps", async function (assert) {

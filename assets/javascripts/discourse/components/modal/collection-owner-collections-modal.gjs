@@ -7,6 +7,7 @@ import DLoadMore from "discourse/ui-kit/d-load-more";
 import DModal from "discourse/ui-kit/d-modal";
 import { popupAjaxError } from "discourse/lib/ajax-error";
 import { i18n } from "discourse-i18n";
+import CollectionRoleHint from "../collection-role-hint";
 import CollectionTile from "../collection-tile";
 import { listCollections } from "../../lib/collection-api";
 
@@ -98,6 +99,7 @@ export default class CollectionOwnerCollectionsModal extends Component {
     >
       <:body>
         <div class="collection-owner-collections" {{didInsert this.load}}>
+          <CollectionRoleHint />
           {{#if this.loading}}
             <DConditionalLoadingSpinner @condition={{this.loading}} />
           {{else}}

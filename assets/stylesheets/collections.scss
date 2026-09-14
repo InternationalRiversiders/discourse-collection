@@ -136,6 +136,17 @@
   }
 }
 
+// A tile's role badge is the viewer's, which a page listing one user's collections can
+// read as that user's; those pages carry this note.
+.collection-role-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.75rem;
+  color: var(--primary-medium);
+  font-size: var(--font-down-1);
+}
+
 .collection-tile {
   display: flex;
   flex-direction: column;

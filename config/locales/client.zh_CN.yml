@@ -49,6 +49,7 @@ zh_CN:
       order_desc: "降序"
       owner_badge: "所有者"
       teamworker_badge: "共同维护者"
+      role_hint: "「所有者」与「共同维护者」标签表示你本人在各专辑中的身份，而非该用户的身份。"
       no_owner: "无主"
       no_topics_yet: "暂无话题"
       tile:

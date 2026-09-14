@@ -189,6 +189,12 @@ acceptance("Collections owner other collections", function (needs) {
     assert
       .dom(".d-modal .collection-list__grid .collection-tile")
       .exists({ count: 2 }, "rendered with the list page's tiles");
+    assert
+      .dom(".d-modal .collection-role-hint")
+      .containsText(
+        i18n("collections.role_hint"),
+        "the role badge is the viewer's, and the modal says so"
+      );
   });
 
   test("pages the modal list as the sentinel comes into view", async function (assert) {

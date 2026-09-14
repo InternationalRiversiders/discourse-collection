@@ -5,6 +5,7 @@ import { action } from "@ember/object";
 import { service } from "@ember/service";
 import { eq } from "discourse/truth-helpers";
 import { i18n } from "discourse-i18n";
+import CollectionRoleHint from "./collection-role-hint";
 import CollectionTabs from "./collection-tabs";
 import CollectionTile from "./collection-tile";
 import CollectionFormModal from "./modal/collection-form-modal";
@@ -19,6 +20,12 @@ export default class CollectionListPage extends Component {
 
   get showCreate() {
     return this.args.create && this.currentUser;
+  }
+
+  // The profile's collections tab is the only caller that wants the note: every tile
+  // there belongs to one user, so the role badge looks like that user's.
+  get showRoleHint() {
+    return this.args.showRoleHint ?? false;
   }
 
   // The profile's collections tab reuses this page but is not one of the
@@ -63,6 +70,10 @@ export default class CollectionListPage extends Component {
             </button>
           {{/if}}
         </header>
+
+        {{#if this.showRoleHint}}
+          <CollectionRoleHint />
+        {{/if}}
 
         {{#if this.showSort}}
           <div class="collection-list__toolbar">

@@ -6,6 +6,7 @@ export default <template>
     @controller={{@controller}}
     @emptyBodyKey="collections.user_activity.empty"
     @emptyTitleKey="collections.user_activity.empty_title"
+    @showRoleHint={{true}}
     @showSort={{false}}
     @showTabs={{false}}
     @subtitleKey="collections.user_activity.subtitle"

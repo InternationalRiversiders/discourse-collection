@@ -94,6 +94,11 @@ acceptance("Collections profile activity tab", function (needs) {
     assert.dom(".collection-list__grid .collection-tile").exists({ count: 1 });
     assert.dom(".collection-tile").containsText("Owned gems");
     assert.dom(".collection-list__total").containsText("2");
+    // Every tile here is this user's, so the role badge would read as theirs; the page
+    // spells out that it is the viewer's instead.
+    assert
+      .dom(".collection-role-hint")
+      .containsText(i18n("collections.role_hint"));
   });
 
   test("hides the list tabs and the sort controls", async function (assert) {
@@ -156,6 +161,8 @@ acceptance("Collections profile activity tab, guest reading on", function (needs
     assert.strictEqual(currentURL(), "/u/eviltrout/activity/collections");
     assert.dom(".user-nav__activity-collections a").exists();
     assert.dom(".collection-tile").containsText("Unclaimed box");
+    // A guest holds no role and sees no badge, so there is nothing to explain.
+    assert.dom(".collection-role-hint").doesNotExist();
   });
 });
 

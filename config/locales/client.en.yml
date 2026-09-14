@@ -53,6 +53,9 @@ en:
       order_desc: "Descending"
       owner_badge: "Owner"
       teamworker_badge: "Maintainer"
+      # The badge on a tile reports the viewer's own standing in that collection, so a
+      # page that lists one user's collections has to say as much.
+      role_hint: "“Owner” and “Maintainer” badges show your own role in a collection, not the role of the user whose collections these are."
       no_owner: "Unclaimed"
       no_topics_yet: "No topics yet"
       # Prefixes for the two relative timestamps on a list tile. The "ago" part
