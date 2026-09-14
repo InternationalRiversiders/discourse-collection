@@ -8,11 +8,6 @@ discourse_collection:
   collection_moderators_can_manage_collections:
     default: false
     client: true
-  collection_onebox_enabled:
-    default: false
-  collection_onebox_disabled_categories:
-    default: ""
-    type: category_list
   collection_create_allowed_groups:
     default: "11" # auto group @trust_level_1
     type: group_list
@@ -50,12 +45,6 @@ discourse_collection:
   collection_max_teamworkers_per_collection:
     default: 5
     min: 0
-  collection_max_selected_replies_per_topic:
-    default: 3
-    min: 1
-  collection_max_owner_collections_per_detail:
-    default: 10
-    min: 1
   collection_name_min_length:
     default: 3
     client: true
@@ -77,9 +66,20 @@ discourse_collection:
     default: nobody
     type: enum
     enum: CollectionUnlimitedCollectionsRoleSiteSetting
+  collection_max_selected_replies_per_topic:
+    default: 3
+    min: 1
+  collection_max_owner_collections_per_detail:
+    default: 10
+    min: 1
   collection_invite_validity_days:
     default: 10
     validator: CollectionInviteValidityDaysValidator
   collection_invite_history_days:
     default: 30
     validator: CollectionInviteHistoryDaysValidator
+  collection_onebox_enabled:
+    default: false
+  collection_onebox_disabled_categories:
+    default: ""
+    type: category_list
