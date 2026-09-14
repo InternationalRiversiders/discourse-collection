@@ -28,6 +28,11 @@ import {
  * on the first post, the reply's featured state on any other post. Every action
  * confirms first and the modal stays open so a run of collections can be edited
  * without reopening it.
+ *
+ * Its header also carries the way to create a collection. The form is a modal of its
+ * own and the modal service holds one at a time, so the picker hands the chore to its
+ * caller and is reopened by it once the form is done (see the entry point in
+ * components/post-menu).
  */
 export default class AddToCollectionModal extends Component {
   @service dialog;
@@ -62,6 +67,11 @@ export default class AddToCollectionModal extends Component {
   }
 
   @action
+  createCollection() {
+    this.args.model.onCreate?.();
+  }
+
+  @action
   async load() {
     // The list endpoint carries no membership information, so the row state is
     // seeded by the caller from the topic and post the server injected (docs/07).
@@ -78,7 +88,7 @@ export default class AddToCollectionModal extends Component {
       if (seq !== this.#requestSeq) {
         return;
       }
-      this.collections = page.collections;
+      this.collections = this.#pinNewCollection(page.collections);
       this.meta = page.meta;
     } catch (err) {
       if (seq === this.#requestSeq) {
@@ -106,7 +116,10 @@ export default class AddToCollectionModal extends Component {
       if (seq !== this.#requestSeq) {
         return;
       }
-      this.collections = [...this.collections, ...page.collections];
+      this.collections = this.#pinNewCollection([
+        ...this.collections,
+        ...page.collections,
+      ]);
       this.meta = page.meta;
     } catch (err) {
       if (seq === this.#requestSeq) {
@@ -217,8 +230,35 @@ export default class AddToCollectionModal extends Component {
     }
   }
 
+  // A collection created through this modal's own entry point holds no topics yet, so the
+  // list's ordering (last topic added, newest first) would leave it at the very bottom —
+  // where the user who just created it cannot see it. It is pinned to the top instead, and
+  // filtered out of the pages so it never shows twice.
+  #pinNewCollection(collections) {
+    const created = this.args.model.newCollection;
+
+    if (!created) {
+      return collections;
+    }
+
+    return [created, ...collections.filter((item) => item.id !== created.id)];
+  }
+
   <template>
-    <DModal @closeModal={{this.close}} @title={{i18n this.titleKey}}>
+    <DModal
+      class="add-to-collection-modal"
+      @closeModal={{this.close}}
+      @title={{i18n this.titleKey}}
+    >
+      <:headerBelowTitle>
+        <button
+          type="button"
+          class="btn btn-default add-to-collection__new"
+          {{on "click" this.createCollection}}
+        >
+          {{i18n "collections.topic.new_collection"}}
+        </button>
+      </:headerBelowTitle>
       <:body>
         <div class="add-to-collection" {{didInsert this.load}}>
           <p class="add-to-collection__topic">{{this.args.model.title}}</p>

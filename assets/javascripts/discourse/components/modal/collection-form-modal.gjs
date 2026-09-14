@@ -13,7 +13,9 @@ import { createCollection, updateCollection } from "../../lib/collection-api";
 // renaming / re-describing it (docs/05 §1). Fields, limits and layout are identical, so
 // @model.mode picks the wording (collections.create.* / collections.edit.*, two
 // parallel locale blocks) and the endpoint. Only create lands the author somewhere
-// new; editing leaves the page in place and hands it the updated collection.
+// new — unless the caller passes `onCreated` (the topic picker reopens itself around the
+// form and decides what happens next); editing leaves the page in place and hands it the
+// updated collection.
 export default class CollectionFormModal extends Component {
   @service router;
   @service siteSettings;
@@ -144,13 +146,16 @@ export default class CollectionFormModal extends Component {
     return updateCollection(this.args.model.id, attributes);
   }
 
-  // A brand new collection has no page to stay on, so reading it becomes the
-  // destination; an edit reports back and the page mirrors what it renders.
+  // A brand new collection has no page to stay on, so reading it becomes the destination
+  // unless the caller passes `onCreated` and decides for itself (the topic picker reopens
+  // itself around the form). An edit reports back and the page mirrors what it renders.
   #finished(collection) {
-    if (this.isCreate) {
-      this.router.transitionTo("collectionsShow", collection.id);
-    } else {
+    if (!this.isCreate) {
       this.args.model.onSaved?.(collection);
+    } else if (this.args.model.onCreated) {
+      this.args.model.onCreated(collection);
+    } else {
+      this.router.transitionTo("collectionsShow", collection.id);
     }
   }
 

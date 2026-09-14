@@ -1,4 +1,4 @@
-import { click, settled, visit } from "@ember/test-helpers";
+import { click, fillIn, settled, visit } from "@ember/test-helpers";
 import { test } from "qunit";
 import { cloneJSON } from "discourse/lib/object";
 import topicFixtures from "discourse/tests/fixtures/topic";
@@ -75,12 +75,15 @@ async function acceptDialog(selector = ".dialog-footer .btn-primary") {
 }
 
 acceptance("Collections topic page reverse lookup", function (needs) {
-  const requests = { posted: [], removed: [], patched: [] };
+  const requests = { posted: [], removed: [], patched: [], created: [] };
+  let createdCollection = null;
 
   needs.hooks.beforeEach(() => {
     requests.posted = [];
     requests.removed = [];
     requests.patched = [];
+    requests.created = [];
+    createdCollection = null;
   });
 
   needs.user();
@@ -97,17 +100,42 @@ acceptance("Collections topic page reverse lookup", function (needs) {
     server.get("/t/280.json", payload);
     server.get("/t/280/:post_number.json", payload);
 
-    server.get("/collections/mine.json", () =>
-      helper.response({
-        collections: [
-          collectionShape(12, "Riverside reads"),
-          // Also holds this topic, and features the reply below.
-          collectionShape(30, "Quotes"),
-          collectionShape(40, "Morning links", { topic_count: 0 }),
-        ],
-        meta: { page: 0, page_size: 30, more: false, total: 3 },
-      })
-    );
+    server.get("/collections/mine.json", () => {
+      const collections = [
+        collectionShape(12, "Riverside reads"),
+        // Also holds this topic, and features the reply below.
+        collectionShape(30, "Quotes"),
+        collectionShape(40, "Morning links", { topic_count: 0 }),
+      ];
+
+      // A collection that was just created holds no topics, so the endpoint's ordering
+      // (last topic added, newest first) really does put it last; the picker is expected
+      // to lift it to the top all the same.
+      if (createdCollection) {
+        collections.push(createdCollection);
+      }
+
+      return helper.response({
+        collections,
+        meta: {
+          page: 0,
+          page_size: 30,
+          more: false,
+          total: collections.length,
+        },
+      });
+    });
+
+    server.post("/collections.json", (request) => {
+      const body = new URLSearchParams(request.requestBody);
+      requests.created.push(body.get("name"));
+      createdCollection = collectionShape(41, body.get("name"), {
+        topic_count: 0,
+        last_topic_added_at: null,
+      });
+
+      return helper.response(createdCollection);
+    });
 
     server.post("/collections/:id/topics.json", (request) => {
       requests.posted.push(request.params.id);
@@ -299,6 +327,51 @@ acceptance("Collections topic page reverse lookup", function (needs) {
     assert
       .dom(`${FEATURED} ${CHIP}`)
       .exists({ count: 1 }, "the reply loses the chip again");
+  });
+
+  test("creates a collection from the picker and comes back to it", async function (assert) {
+    await visit(TOPIC_URL);
+    await settled();
+    await openManager(1);
+
+    await click(".add-to-collection__new");
+    await settled();
+
+    assert
+      .dom(".collection-form")
+      .exists("the create form takes the picker's place");
+    assert
+      .dom(".add-to-collection")
+      .doesNotExist("the picker is replaced, not stacked on");
+
+    await fillIn("#collection-form-name", "Reading list");
+    await click(".collection-form__submit");
+    await settled();
+
+    assert.deepEqual(requests.created, ["Reading list"], "creates it");
+    assert.dom(".add-to-collection").exists("the picker comes back");
+    assert
+      .dom(".add-to-collection__row")
+      .exists({ count: 4 }, "the new collection is listed, and only once");
+    assert
+      .dom(".add-to-collection__row:first-child .add-to-collection__name")
+      .hasText("Reading list", "it leads the list it would have sorted last in");
+  });
+
+  test("comes back to the picker when the form is dismissed", async function (assert) {
+    await visit(TOPIC_URL);
+    await settled();
+    await openManager(1);
+
+    await click(".add-to-collection__new");
+    await settled();
+    await click(".collection-form__cancel");
+    await settled();
+
+    assert.deepEqual(requests.created, [], "nothing is created");
+    assert
+      .dom(".add-to-collection__row")
+      .exists({ count: 3 }, "the picker is back as it was");
   });
 });
 

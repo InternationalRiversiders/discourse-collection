@@ -157,6 +157,7 @@ zh_CN:
         featured_in: "精选于"
         menu_title: "淘专辑"
         picker_title: "收藏进专辑"
+        new_collection: "新建"
         feature_title: "精选回复"
         collect: "收录"
         uncollect: "取消收录"

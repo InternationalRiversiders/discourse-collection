@@ -3,6 +3,7 @@ import { service } from "@ember/service";
 import Component from "@glimmer/component";
 import DButton from "discourse/ui-kit/d-button";
 import AddToCollectionModal from "../modal/add-to-collection-modal";
+import CollectionFormModal from "../modal/collection-form-modal";
 
 /**
  * Post action bar entry for collections (docs/07). Every post carries it: on
@@ -55,33 +56,7 @@ export default class CollectionPostMenuButton extends Component {
 
   @action
   openManager() {
-    if (!this.#topic) {
-      return;
-    }
-
-    const shared = {
-      topicId: this.#topic.id,
-      title: this.#topic.fancy_title,
-      collectedIds: this.#topicCollections.map((collection) => collection.id),
-    };
-
-    const model = this.#isFirstPost
-      ? {
-          ...shared,
-          mode: "topic",
-          onCollect: (collection) => this.#addToTopic(collection),
-          onUncollect: (collectionId) => this.#removeFromTopic(collectionId),
-        }
-      : {
-          ...shared,
-          mode: "post",
-          postId: this.#post.id,
-          selectedIds: this.#postSelectedIds,
-          onFeature: (collectionId) => this.#featureReply(collectionId, true),
-          onUnfeature: (collectionId) => this.#featureReply(collectionId, false),
-        };
-
-    this.modal.show(AddToCollectionModal, { model });
+    this.#showPicker(null);
   }
 
   // `collections` is a registered tracked array, so reassigning it re-renders the
@@ -105,6 +80,29 @@ export default class CollectionPostMenuButton extends Component {
       : ids.filter((id) => id !== collectionId);
   }
 
+  // The picker's own entry point for creating a collection opens the shared form; the
+  // form replaces the picker (the modal service holds one modal at a time), so the picker
+  // is reopened here once the form is done, whether a collection was created or the form
+  // was dismissed.
+  async #openCreateForm() {
+    let created = null;
+
+    await this.modal.show(CollectionFormModal, {
+      model: {
+        mode: "create",
+        onCreated: (collection) => {
+          created = collection;
+        },
+      },
+    });
+
+    if (this.isDestroyed) {
+      return;
+    }
+
+    this.#showPicker(created);
+  }
+
   #removeFromTopic(collectionId) {
     this.#topic.collections = this.#topicCollections.filter(
       (held) => held.id !== collectionId
@@ -121,6 +119,38 @@ export default class CollectionPostMenuButton extends Component {
         );
       }
     }
+  }
+
+  #showPicker(newCollection) {
+    if (!this.#topic) {
+      return;
+    }
+
+    const shared = {
+      topicId: this.#topic.id,
+      title: this.#topic.fancy_title,
+      collectedIds: this.#topicCollections.map((collection) => collection.id),
+      newCollection,
+      onCreate: () => this.#openCreateForm(),
+    };
+
+    const model = this.#isFirstPost
+      ? {
+          ...shared,
+          mode: "topic",
+          onCollect: (collection) => this.#addToTopic(collection),
+          onUncollect: (collectionId) => this.#removeFromTopic(collectionId),
+        }
+      : {
+          ...shared,
+          mode: "post",
+          postId: this.#post.id,
+          selectedIds: this.#postSelectedIds,
+          onFeature: (collectionId) => this.#featureReply(collectionId, true),
+          onUnfeature: (collectionId) => this.#featureReply(collectionId, false),
+        };
+
+    this.modal.show(AddToCollectionModal, { model });
   }
 
   <template>

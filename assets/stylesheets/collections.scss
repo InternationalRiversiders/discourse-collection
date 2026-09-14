@@ -902,6 +902,16 @@
   }
 }
 
+// The picker's header carries a "new collection" entry point beside the title. The header
+// is a space-between flex row, so the title takes the spare space and the button lands
+// next to the close button instead of midway between the two.
+.add-to-collection-modal {
+  .d-modal__header .d-modal__title {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
 .add-to-collection {
   display: grid;
   gap: 0.6rem;
