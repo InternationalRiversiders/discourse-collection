@@ -1,7 +1,20 @@
+// Core colours anchors from selectors that outrank a bare class (`common/foundation/base.scss`),
+// and they keep matching for as long as the pointer is on the anchor, so an anchor this file
+// colours itself states that colour for `:link` and `:visited` alike and then spells out its
+// own `:hover`. An unvisited-only rule would give way to the link blue once the target had
+// been visited; the `:link`/`:visited` pair on its own would hold the colour on hover.
+//
 // A face and the name beside it open the same user card, so the name is a link too; the
 // link colour would lift it out of the sentence carrying it.
 .collection-user-link {
-  color: inherit;
+  &:link,
+  &:visited {
+    color: inherit;
+  }
+
+  &:hover {
+    color: var(--d-link-color);
+  }
 }
 
 .collection-list {
@@ -33,7 +46,11 @@
   &__tab {
     padding: 0.3em 0.75em;
     border-radius: 100px;
-    color: var(--primary-medium);
+
+    &:link,
+    &:visited {
+      color: var(--primary-medium);
+    }
 
     &:hover {
       color: var(--primary);
@@ -127,11 +144,16 @@
   border: 1px solid var(--primary-low);
   border-radius: 8px;
   background: var(--secondary);
-  color: var(--primary);
   text-decoration: none;
+
+  &:link,
+  &:visited {
+    color: var(--primary);
+  }
 
   &:hover {
     border-color: var(--primary-medium);
+    color: var(--d-link-color);
   }
 
   &__header {
@@ -185,8 +207,12 @@
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    color: inherit;
     text-decoration: none;
+
+    &:link,
+    &:visited {
+      color: inherit;
+    }
 
     &:hover .collection-tile__owner-name {
       color: var(--primary);
@@ -339,10 +365,14 @@
   }
 
   &__collection {
-    color: var(--primary);
     font-weight: 700;
     text-decoration: none;
     overflow-wrap: anywhere;
+
+    &:link,
+    &:visited {
+      color: var(--primary);
+    }
 
     &:hover {
       color: var(--tertiary);
@@ -492,7 +522,15 @@
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    color: var(--primary-medium);
+
+    &:link,
+    &:visited {
+      color: var(--primary-medium);
+    }
+
+    &:hover {
+      color: var(--d-link-color);
+    }
   }
 
   &__heading {
@@ -689,10 +727,14 @@
   }
 
   &__title {
-    color: var(--primary);
     font-weight: 700;
     text-decoration: none;
     overflow-wrap: anywhere;
+
+    &:link,
+    &:visited {
+      color: var(--primary);
+    }
 
     &:hover {
       color: var(--tertiary);
@@ -727,8 +769,16 @@
 
   &__author {
     align-self: center;
-    color: var(--primary-medium);
     font-size: var(--font-down-1);
+
+    &:link,
+    &:visited {
+      color: var(--primary-medium);
+    }
+
+    &:hover {
+      color: var(--d-link-color);
+    }
   }
 
   // The excerpt is the topic's own lead text, so it is a second way into the topic
@@ -736,9 +786,13 @@
   &__excerpt {
     display: block;
     margin: 0;
-    color: var(--primary-high);
     text-decoration: none;
     overflow-wrap: anywhere;
+
+    &:link,
+    &:visited {
+      color: var(--primary-high);
+    }
 
     &:hover {
       color: var(--primary);
@@ -823,8 +877,12 @@
     min-width: 0;
     align-items: baseline;
     gap: 0.5rem;
-    color: var(--primary-high);
     text-decoration: none;
+
+    &:link,
+    &:visited {
+      color: var(--primary-high);
+    }
 
     &:hover .collection-topic__reply-excerpt {
       color: var(--primary);
@@ -833,9 +891,17 @@
 
   &__reply-user {
     flex: none;
-    color: var(--primary-medium);
     font-size: var(--font-down-1);
     font-weight: 700;
+
+    &:link,
+    &:visited {
+      color: var(--primary-medium);
+    }
+
+    &:hover {
+      color: var(--d-link-color);
+    }
   }
 
   &__reply-excerpt {
@@ -886,9 +952,13 @@
     padding: 0.1em 0.6em;
     border: 1px solid var(--primary-low);
     border-radius: 100px;
-    color: var(--primary-high);
     text-decoration: none;
     overflow-wrap: anywhere;
+
+    &:link,
+    &:visited {
+      color: var(--primary-high);
+    }
 
     &:hover {
       border-color: var(--tertiary);
@@ -1042,8 +1112,12 @@
     min-width: 0;
     align-items: baseline;
     gap: 0.5rem;
-    color: var(--primary-high);
     text-decoration: none;
+
+    &:link,
+    &:visited {
+      color: var(--primary-high);
+    }
 
     &:hover .topic-selected-replies__reply-excerpt {
       color: var(--primary);
@@ -1052,9 +1126,17 @@
 
   &__reply-user {
     flex: none;
-    color: var(--primary-medium);
     font-size: var(--font-down-1);
     font-weight: 700;
+
+    &:link,
+    &:visited {
+      color: var(--primary-medium);
+    }
+
+    &:hover {
+      color: var(--d-link-color);
+    }
   }
 
   &__reply-excerpt {
