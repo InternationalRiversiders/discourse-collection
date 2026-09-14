@@ -149,6 +149,7 @@ en:
         confirm_revoke: "Revoke the invitation to @%{username}?"
       reading:
         heading: "Collected topics"
+        order_label: "By added time"
         empty_body: "Topics added to this collection appear here."
         added: "Added"
         note_label: "Note"

@@ -16,21 +16,26 @@ export default <template>
       <h2 class="collection-topics__heading">
         {{i18n "collections.reading.heading"}}
       </h2>
-      <button
-        type="button"
-        class="collection-topics__order-toggle"
-        title={{if
-          (eq @controller.topicsOrder "asc")
-          (i18n "collections.order_asc")
-          (i18n "collections.order_desc")
-        }}
-        {{on "click" @controller.toggleTopicsOrder}}
-      >
-        {{dIcon (if (eq @controller.topicsOrder "asc") "arrow-up" "arrow-down")}}
-        {{i18n
-          (if (eq @controller.topicsOrder "asc") "collections.order_asc" "collections.order_desc")
-        }}
-      </button>
+      <div class="collection-topics__order">
+        <span class="collection-topics__order-label">
+          {{i18n "collections.reading.order_label"}}
+        </span>
+        <button
+          type="button"
+          class="collection-topics__order-toggle"
+          title={{if
+            (eq @controller.topicsOrder "asc")
+            (i18n "collections.order_asc")
+            (i18n "collections.order_desc")
+          }}
+          {{on "click" @controller.toggleTopicsOrder}}
+        >
+          {{dIcon (if (eq @controller.topicsOrder "asc") "arrow-up" "arrow-down")}}
+          {{i18n
+            (if (eq @controller.topicsOrder "asc") "collections.order_asc" "collections.order_desc")
+          }}
+        </button>
+      </div>
     </header>
 
     {{#if @controller.loadingTopics}}

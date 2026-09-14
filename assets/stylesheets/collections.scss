@@ -684,6 +684,18 @@
     font-size: var(--font-up-1);
   }
 
+  // The feed sorts on one key only (docs/04 §1), so the label names it.
+  &__order {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__order-label {
+    color: var(--primary-medium);
+    font-size: var(--font-down-1);
+  }
+
   &__order-toggle {
     display: inline-flex;
     align-items: center;

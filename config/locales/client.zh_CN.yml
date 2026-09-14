@@ -136,6 +136,7 @@ zh_CN:
         confirm_revoke: "撤销对 @%{username} 的邀请？"
       reading:
         heading: "收录的话题"
+        order_label: "按收录时间"
         empty_body: "收录到此淘专辑的话题会显示在这里。"
         added: "收录于"
         note_label: "备注"
