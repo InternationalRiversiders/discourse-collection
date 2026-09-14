@@ -37,6 +37,13 @@ en:
       mine_empty: "You have not created or been invited to any collection yet."
       subscribed_empty_title: "Nothing subscribed yet"
       subscribed_empty: "You have not subscribed to any collection yet."
+      # The collections tab on a profile's activity page: one user's collections,
+      # so the heading names them while the empty body explains whose list is bare.
+      user_activity:
+        title: "%{username}’s collections"
+        subtitle: "Collections %{username} created or maintains."
+        empty_title: "No collections yet"
+        empty: "%{username} has not created or maintained any collection yet."
       sort:
         created_at: "Created"
         last_topic_added_at: "Recently updated"

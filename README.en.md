@@ -24,6 +24,8 @@ Signed-in users can create collections, collect any topic on the forum into them
 
 - **Anonymous browsing**: off by default; when it is on, signed-out visitors can browse collections.
 
+- **Profile page**: a **Collections** tab on a user's activity page lists every collection that user created or maintains, ordered by most recently collected.
+
 - **Moderation**: admins (and moderators, if enabled by a setting) can fix the name or description of any collection and rewrite collection notes; those changes go into Discourse's native staff action log.
 
 Visibility: the topic and post lists inside a collection are always filtered on the server against the viewer's permissions, and entries the viewer cannot access are dropped (the same rules as the forum's own lists, except that topics with a muted notification level are still included) — a collection is never a way around forum permissions.

@@ -35,6 +35,11 @@ zh_CN:
       mine_empty: "你还没有创建或受邀共同维护任何淘专辑。"
       subscribed_empty_title: "还没有订阅"
       subscribed_empty: "你还没有订阅任何淘专辑。"
+      user_activity:
+        title: "%{username} 的淘专辑"
+        subtitle: "%{username} 创建或维护的淘专辑。"
+        empty_title: "还没有淘专辑"
+        empty: "%{username} 还没有创建或维护任何淘专辑。"
       sort:
         created_at: "创建时间"
         last_topic_added_at: "最近收录"
