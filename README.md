@@ -20,6 +20,8 @@ Discourse 插件：公开的「淘专辑」。
 
 - **转让所有权**：owner 可发起换主邀请；staff 也可对任意专辑（含因原主注销而「无主」的专辑）发起。一律需受邀人接受后生效。
 
+- **链接卡片**：帖子正文里的专辑链接独占一行时渲染为专辑卡片（名称、描述、计数、所有者、时间），位于句子中间时渲染为「专辑名 - 淘专辑」的链接。默认关闭。
+
 - **游客浏览**：默认关闭，开启后未登录用户可浏览专辑。
 
 - **管理**：管理员（及经设置授权的版主）可修正任意专辑的名称 / 描述、改写收录备注；相关改动进 Discourse 原生的「员工操作日志」。
@@ -42,19 +44,21 @@ Discourse 插件：公开的「淘专辑」。
 
 按 Discourse 插件的常规方式安装即可，无额外依赖（数据库迁移会建 6 张表）。安装后确认 `collection_enabled` 与各条准入群组设置符合预期。
 
+开启「链接卡片」后，存量帖子需**重新烘焙**（rebake）才会出现卡片。
+
 ## 站点设置
 
 设置项都在站点设置的「插件」分类下，各有说明与默认值；以下是常用的几项：
 
 | 设置 | 默认 | 说明 |
 | --- | --- | --- |
-| `collection_enabled` | 开 | 插件总开关 |
-| `collection_allow_anonymous` | 关 | 未登录用户可浏览专辑 |
-| `collection_moderators_can_manage_collections` | 关 | 版主可管理他人专辑（改名称、描述或发起换主）；管理员恒可 |
-| `collection_create_allowed_groups` | `trust_level_1` | 可创建专辑、可被邀为新 owner 的群组；留空 = 关闭 |
-| `collection_teamworker_allowed_groups` | `trust_level_1` | 可被邀为共同维护者的群组；留空 = 关闭 |
-| `collection_create_disallowed_groups` | 空 | 不允许创建专辑、担任新 owner 的群组；留空 = 不拒绝任何人 |
-| `collection_teamworker_disallowed_groups` | 空 | 不允许成为共同维护者的群组；留空 = 不拒绝任何人 |
+| Collection enabled | 开 | 插件总开关 |
+| Collection allow anonymous | 关 | 未登录用户可浏览专辑 |
+| Collection moderators can manage collections | 关 | 版主可管理他人专辑（改名称、描述或发起换主）；管理员恒可 |
+| Collection create allowed groups | `trust_level_1` | 可创建专辑、可被邀为新 owner 的群组；留空 = 关闭 |
+| Collection teamworker allowed groups | `trust_level_1` | 可被邀为共同维护者的群组；留空 = 关闭 |
+| Collection create disallowed groups | 空 | 不允许创建专辑、担任新 owner 的群组；留空 = 不拒绝任何人 |
+| Collection teamworker disallowed groups | 空 | 不允许成为共同维护者的群组；留空 = 不拒绝任何人 |
 
 准入按**群组成员身份**判定，且只在操作发生的那一刻判定；**不允许组优先于允许组**（同时命中即被拒）。豁免上限的角色设置只豁免数量上限，不豁免准入。
 

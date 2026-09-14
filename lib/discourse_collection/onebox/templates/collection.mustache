@@ -1,0 +1,61 @@
+<aside class="onebox collection-onebox">
+  <div class="collection-onebox__body">
+    <div class="collection-onebox__main">
+      <h3 class="collection-onebox__name">
+        <a href="{{url}}">
+          <svg class="fa d-icon d-icon-collection svg-icon svg-string" xmlns="http://www.w3.org/2000/svg"><use href="#collection"></use></svg>{{name}}
+        </a>
+      </h3>
+      {{#description}}
+        <p class="collection-onebox__description">{{description}}</p>
+      {{/description}}
+    </div>
+
+    <div class="collection-onebox__meta">
+      <div class="collection-onebox__owner">
+        {{#owner}}
+          <a class="collection-onebox__owner-link" data-user-card="{{username}}">
+            <img class="avatar" src="{{avatar_url}}" alt="" width="{{avatar_size}}" height="{{avatar_size}}" loading="lazy">
+            <span class="collection-onebox__owner-name">{{username}}</span>
+          </a>
+        {{/owner}}
+        {{^owner}}
+          <span class="collection-onebox__owner-name -unclaimed">{{labels.no_owner}}</span>
+        {{/owner}}
+      </div>
+
+      <div class="collection-onebox__stats">
+        <span class="collection-onebox__stat" title="{{labels.topic_count}}">
+          <svg class="fa d-icon d-icon-layer-group svg-icon svg-string" xmlns="http://www.w3.org/2000/svg"><use href="#layer-group"></use></svg>
+          {{topic_count}}
+        </span>
+        <span class="collection-onebox__stat" title="{{labels.subscriber_count}}">
+          <svg class="fa d-icon d-icon-bookmark svg-icon svg-string" xmlns="http://www.w3.org/2000/svg"><use href="#bookmark"></use></svg>
+          {{subscriber_count}}
+        </span>
+        <span class="collection-onebox__stat" title="{{labels.teamworker_count}}">
+          <svg class="fa d-icon d-icon-user-group svg-icon svg-string" xmlns="http://www.w3.org/2000/svg"><use href="#user-group"></use></svg>
+          {{teamworker_count}}
+        </span>
+      </div>
+    </div>
+
+    <div class="collection-onebox__times">
+      <span class="collection-onebox__activity">
+        <svg class="fa d-icon d-icon-clock svg-icon svg-string" xmlns="http://www.w3.org/2000/svg"><use href="#clock"></use></svg>
+        {{labels.created_at}}
+        <span class="relative-date" data-time="{{created_at_ms}}" data-format="medium-with-ago">{{created_at_text}}</span>
+      </span>
+      {{#has_topics}}
+        <span class="collection-onebox__activity">
+          <svg class="fa d-icon d-icon-clock svg-icon svg-string" xmlns="http://www.w3.org/2000/svg"><use href="#clock"></use></svg>
+          {{labels.last_topic_added_at}}
+          <span class="relative-date" data-time="{{last_topic_added_at_ms}}" data-format="medium-with-ago">{{last_topic_added_at_text}}</span>
+        </span>
+      {{/has_topics}}
+      {{^has_topics}}
+        <span class="collection-onebox__activity -none">{{labels.no_topics_yet}}</span>
+      {{/has_topics}}
+    </div>
+  </div>
+</aside>

@@ -20,6 +20,8 @@ Signed-in users can create collections, collect any topic on the forum into them
 
 - **Ownership transfer**: the owner can start an ownership transfer, and staff can start one on any collection (including an unclaimed one, whose owner's account was deleted). Either way it takes effect only once the invitee accepts.
 
+- **Link cards**: a collection link on a line of its own in a post body renders as a card (name, description, counts, owner, dates), and the same link inside a sentence renders as a "name - Collections" link. Off by default.
+
 - **Anonymous browsing**: off by default; when it is on, signed-out visitors can browse collections.
 
 - **Moderation**: admins (and moderators, if enabled by a setting) can fix the name or description of any collection and rewrite collection notes; those changes go into Discourse's native staff action log.
@@ -42,19 +44,21 @@ Visibility: the topic and post lists inside a collection are always filtered on 
 
 Install it the usual way for a Discourse plugin; there are no extra dependencies (the database migration creates 6 tables). After installing, check that `collection_enabled` and the various group admission settings are what you expect.
 
+Existing posts need to be **rebaked** before they grow a card once link cards are turned on.
+
 ## Site settings
 
 The settings all live under the "Plugins" category in site settings, each with its own description and default value; the commonly used ones are:
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| `collection_enabled` | on | Master switch for the plugin |
-| `collection_allow_anonymous` | off | Signed-out visitors can browse collections |
-| `collection_moderators_can_manage_collections` | off | Moderators can manage other people's collections (change the name or description, start an ownership transfer); admins always can |
-| `collection_create_allowed_groups` | `trust_level_1` | Groups that may create collections and be invited as a new owner; empty = off |
-| `collection_teamworker_allowed_groups` | `trust_level_1` | Groups that may be invited as a co-maintainer; empty = off |
-| `collection_create_disallowed_groups` | empty | Groups that may not create collections or become a new owner; empty = nobody is rejected |
-| `collection_teamworker_disallowed_groups` | empty | Groups that may not become a co-maintainer; empty = nobody is rejected |
+| Collection enabled | on | Master switch for the plugin |
+| Collection allow anonymous | off | Signed-out visitors can browse collections |
+| Collection moderators can manage collections | off | Moderators can manage other people's collections (change the name or description, start an ownership transfer); admins always can |
+| Collection create allowed groups | `trust_level_1` | Groups that may create collections and be invited as a new owner; empty = off |
+| Collection teamworker allowed groups | `trust_level_1` | Groups that may be invited as a co-maintainer; empty = off |
+| Collection create disallowed groups | empty | Groups that may not create collections or become a new owner; empty = nobody is rejected |
+| Collection teamworker disallowed groups | empty | Groups that may not become a co-maintainer; empty = nobody is rejected |
 
 Admission is decided by **group membership**, and only at the moment the action happens; **disallowed groups take precedence over allowed groups** (matching both means being rejected). The role settings that lift a limit lift only the count limits, not group admission.
 

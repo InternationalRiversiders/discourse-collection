@@ -1070,3 +1070,140 @@
     color: var(--primary-medium);
   }
 }
+
+// Card for a `/collections/:id` link that occupies a line of its own (docs/12 §2). The
+// classes carry their own prefix because plugin stylesheets ship inside the main bundle.
+// Narrow screens stack the pieces the way the list tile does; wide ones move the owner
+// and the counts beside the name, which is what stops the card from being mostly empty
+// space inside core's onebox shell.
+.collection-onebox {
+  &__body {
+    display: grid;
+    grid-template-areas:
+      "main"
+      "meta"
+      "times";
+    gap: 0.5rem;
+  }
+
+  &__main {
+    grid-area: main;
+    min-width: 0;
+  }
+
+  // Core's `.cooked h1…h6` margin shorthand outranks a bare class, so the top margin the
+  // card wants has to be flagged.
+  &__name {
+    margin: 0;
+    margin-top: 0 !important;
+    overflow-wrap: anywhere;
+
+    a[href] {
+      color: var(--tertiary);
+      text-decoration: none;
+    }
+
+    // The plugin's own icon, sitting in front of the name. The link is inline, so the
+    // gap is a margin rather than the `gap` the flex rows use.
+    .d-icon {
+      margin-right: 0.25rem;
+    }
+  }
+
+  &__description {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin: 0.25rem 0 0;
+    overflow-wrap: anywhere;
+    color: var(--primary-high);
+  }
+
+  &__meta {
+    grid-area: meta;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  &__owner {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  // Face and name stay one anchor, so either one opens the same card. It carries no
+  // href, so the pointer has to be spelled out.
+  &__owner-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover .collection-onebox__owner-name {
+      color: var(--primary);
+    }
+  }
+
+  &__owner-name {
+    color: var(--primary-high);
+
+    &.-unclaimed {
+      color: var(--primary-medium);
+      font-style: italic;
+    }
+  }
+
+  &__stats {
+    display: flex;
+    gap: 0.9rem;
+  }
+
+  &__stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--primary-medium);
+  }
+
+  &__times {
+    grid-area: times;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  &__activity {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--primary-medium);
+
+    .d-icon {
+      flex: none;
+    }
+
+    &.-none {
+      font-style: italic;
+    }
+  }
+
+  @media screen and (min-width: 768px) {
+    &__body {
+      grid-template-areas:
+        "main meta"
+        "times times";
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.5rem 1rem;
+    }
+
+    &__times {
+      flex-direction: row;
+      justify-content: space-between;
+    }
+  }
+}

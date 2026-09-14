@@ -3,6 +3,8 @@ zh_CN:
     collection_enabled: "启用公共专辑（淘专辑）功能。"
     collection_allow_anonymous: "允许未登录用户访问公共专辑。关闭时 API 拒绝、前端不显示入口。"
     collection_moderators_can_manage_collections: "允许版主管理其不拥有的专辑：改名称和描述、改 owner。无论此设置如何，管理员始终可管理。用于修正不合规的名称与描述。"
+    collection_onebox_enabled: "帖子中的专辑链接独占一行时渲染为卡片，位于句子中间时渲染为带标题的链接。"
+    collection_onebox_disabled_categories: "这些分类下的话题不渲染专辑 onebox：卡片与句中链接标题一并抑制。留空表示所有分类都允许。"
     collection_create_allowed_groups: "允许创建专辑的群组。成为现有专辑的新 owner 同样须命中本设置。留空表示任何人都不能创建专辑或成为新 owner。成员资格只在操作发生那一刻判定。"
     collection_teamworker_allowed_groups: "允许成为专辑共同维护者的群组。留空表示任何人都不能被邀为共同维护者。成员资格只在操作发生那一刻判定。"
     collection_create_disallowed_groups: "不允许创建专辑、也不允许成为现有专辑新 owner 的群组；即使命中 {{setting:collection_create_allowed_groups}} 也会被拒绝。留空表示不拒绝任何人。本列表优先于允许组列表。"
@@ -24,6 +26,17 @@ zh_CN:
       collection_invite_validity_days_range: "邀请受理窗口不能长于邀请历史保留期。"
       collection_invite_history_days_range: "邀请历史保留期不能短于邀请受理窗口。"
   discourse_collection:
+    # 烘焙期在服务端渲染，故与前端同名卡片文案各存一份（docs/12 §2）。
+    onebox:
+      inline_title: "%{name} - 淘专辑"
+      created_at: "创建于"
+      last_topic_added_at: "更新于"
+      no_topics_yet: "暂无话题"
+      no_owner: "无主"
+      stats:
+        topic_count: "话题数"
+        subscriber_count: "订阅数"
+        teamworker_count: "共同维护者"
     errors:
       name_blank: "专辑名称不能为空。"
       name_out_of_range: "专辑名称长度需在 %{min} 到 %{max} 个字符之间。"

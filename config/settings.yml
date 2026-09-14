@@ -8,6 +8,11 @@ discourse_collection:
   collection_moderators_can_manage_collections:
     default: false
     client: true
+  collection_onebox_enabled:
+    default: false
+  collection_onebox_disabled_categories:
+    default: ""
+    type: category_list
   collection_create_allowed_groups:
     default: "11" # auto group @trust_level_1
     type: group_list

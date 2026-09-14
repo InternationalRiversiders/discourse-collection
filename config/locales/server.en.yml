@@ -3,6 +3,8 @@ en:
     collection_enabled: "Enable the public Collections feature."
     collection_allow_anonymous: "Allow anonymous users to access collections. When disabled, the API rejects requests and the entry is hidden."
     collection_moderators_can_manage_collections: "Allow moderators to manage collections they do not own: change the name and description, and change the owner. Admins can always do this regardless of this setting. Useful for fixing non-compliant names and descriptions."
+    collection_onebox_enabled: "Render a collection card when a post links to a collection on a line of its own, and a titled link when the link sits inside a sentence."
+    collection_onebox_disabled_categories: "Categories whose topics never render collection oneboxes: both the card and the titled link are suppressed. Leave empty to allow oneboxes in every category."
     collection_create_allowed_groups: "Groups whose members may create collections. Becoming the owner of an existing collection also requires membership here. Leave empty to disallow creating collections or becoming a new owner for everyone. Membership is only checked when the operation happens."
     collection_teamworker_allowed_groups: "Groups whose members may become co-maintainers of a collection. Leave empty to disallow co-maintainer invitations for everyone. Membership is only checked when the operation happens."
     collection_create_disallowed_groups: "Groups whose members may not create collections or become the owner of an existing collection, even when they are in {{setting:collection_create_allowed_groups}}. Leave empty to disallow no one. This list takes precedence over the allowed groups list."
@@ -24,6 +26,18 @@ en:
       collection_invite_validity_days_range: "You cannot set the invitation validity window longer than the invitation history retention window."
       collection_invite_history_days_range: "You cannot set the invitation history retention window shorter than the invitation validity window."
   discourse_collection:
+    # Rendered while cooking a post, i.e. on the server, so these are deliberately not
+    # shared with the client-side wordings of the same card (see docs/12 §2).
+    onebox:
+      inline_title: "%{name} - Collections"
+      created_at: "Created"
+      last_topic_added_at: "Updated"
+      no_topics_yet: "No topics yet"
+      no_owner: "Unclaimed"
+      stats:
+        topic_count: "Topics"
+        subscriber_count: "Subscribers"
+        teamworker_count: "Maintainers"
     errors:
       name_blank: "A collection name is required."
       name_out_of_range: "Collection name must be between %{min} and %{max} characters."

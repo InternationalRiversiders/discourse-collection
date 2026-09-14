@@ -1,6 +1,6 @@
 # discourse-collection API 设计
 
-本目录下的文档描述 discourse-collection 插件的 HTTP API 设计，按主题分文件。文件序号即建议的阅读顺序；正文中的引用写作「NN 的 M」，指第 NN 个文件的第 M 节。
+本目录下的文档描述 discourse-collection 插件的 HTTP API 设计与相关渲染行为，按主题分文件。文件序号即建议的阅读顺序；正文中的引用写作「NN 的 M」，指第 NN 个文件的第 M 节。
 
 | 文件 | 内容 |
 | -- | -- |
@@ -15,5 +15,6 @@
 | [09-通知.md](09-通知.md) | 通知 4 型的定义、订阅通知的合并窗、明确不做的事项 |
 | [10-管理操作审计日志.md](10-管理操作审计日志.md) | 落 core `user_histories` 的 5 个 custom_type、字段布局与注册方式 |
 | [11-表结构.md](11-表结构.md) | 6 张表的建表语句、表用途、查询业务与索引 |
+| [12-Onebox.md](12-Onebox.md) | 帖子正文里 `/collections/:id` 链接的卡片 / inline 渲染（无端点） |
 
 端点侧的事实源即本目录文档；schema 侧的事实源为 `db/migrate/` 与仓库级硬规则，硬规则见 [CLAUDE.md](../CLAUDE.md)。

@@ -2,7 +2,7 @@
 
 # name: discourse-collection
 # about: Public collections: signed-in users create topic collections, co-maintain them, feature selected replies, and subscribe to updates.
-# version: 1.0.0
+# version: 1.1.0
 # authors: 0x444858
 
 enabled_site_setting :collection_enabled
@@ -92,6 +92,27 @@ after_initialize do
         preloaded ? preloaded[object.id] || [] : []
       end
   end
+end
+
+# Collection links in post bodies (docs/12): a bare /collections/:id URL on a line of its
+# own becomes a card, the same URL inside a sentence becomes a titled link. Both
+# dispatchers are keyed by the route's controller name, and this engine isolates its
+# namespace, so the key is "discourse_collection/collections" — a mistyped one fails
+# silently, which is why the spec drives Oneboxer.preview end to end.
+#
+# The two prepends carry the cooking options across the dispatchers, which drop them
+# before calling a registered handler (lib/discourse_collection/onebox_opts_forwarding.rb).
+after_initialize do
+  Oneboxer.register_local_handler("discourse_collection/collections") do |url, route, opts|
+    DiscourseCollection::OneboxHandler.handle(url, route, opts)
+  end
+
+  InlineOneboxer.register_local_handler("discourse_collection/collections") do |url, route, opts|
+    DiscourseCollection::OneboxHandler.inline_handle(url, route, opts)
+  end
+
+  Oneboxer.singleton_class.prepend(DiscourseCollection::OneboxOptsForwarding::Patch)
+  InlineOneboxer.singleton_class.prepend(DiscourseCollection::OneboxOptsForwarding::Patch)
 end
 
 # Data Explorer (core's /admin/plugins/discourse-data-explorer) derives its column
