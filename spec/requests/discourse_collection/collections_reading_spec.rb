@@ -116,6 +116,36 @@ RSpec.describe DiscourseCollection::CollectionsController do
       )
     end
 
+    it "sends the topic excerpt as plain text, not core's escaped HTML" do
+      # topics.excerpt holds escaped text: the truncation marker reaches us as the
+      # entity `&hellip;`, which the frontend would otherwise print verbatim.
+      topic = Fabricate(:topic)
+      topic.update_column(:excerpt, "Rivers &amp; lakes&hellip;")
+      collect(collection, topic)
+
+      get "/collections/#{collection.id}/topics.json"
+
+      expect(response.parsed_body["topics"].first["topic"]["excerpt"]).to eq(
+        "Rivers & lakes…",
+      )
+    end
+
+    it "sends a reply excerpt as plain text, with its links stripped" do
+      topic, posts = reply_topic(collection, count: 2)
+      reply = posts.last
+      reply.update_columns(
+        cooked: '<p>Look at <a href="https://example.com/rivers">this &amp; that</a></p>',
+      )
+      collect(collection, topic, has_selected_reply: true)
+      select_reply(collection, reply, topic:)
+
+      get "/collections/#{collection.id}/topics.json"
+
+      selected = response.parsed_body["topics"].first["selected_replies"].first
+      expect(selected["post_id"]).to eq(reply.id)
+      expect(selected["excerpt"]).to eq("Look at this & that")
+    end
+
     it "supports order=asc" do
       older = Fabricate(:topic)
       newer = Fabricate(:topic)

@@ -568,6 +568,15 @@ module DiscourseCollection
       scope
     end
 
+    # Core's excerpts are HTML-escaped text, not plain text: a truncated one ends in
+    # the entity `&hellip;` instead of an ellipsis, and a reply excerpt keeps the `<a>`
+    # tags of the links it quotes. Every excerpt on the wire is plain text
+    # (docs/04 §1), so both the topic card and each reply decode theirs first — the
+    # same call core's own Topic#plain_text_excerpt makes.
+    def plain_text_excerpt(escaped)
+      ExcerptParser.to_plain_text(escaped).to_s
+    end
+
     # topic card columns for a reading-page row (docs/04 §1). All are plain Topic
     # columns read off the preloaded row; the excerpt is the OP excerpt core already
     # denormalized into topics.excerpt (topic_excerpt_maxlength), not computed here.
@@ -582,7 +591,7 @@ module DiscourseCollection
         slug: topic.slug,
         category_id: topic.category_id,
         user_id: topic.user_id,
-        excerpt: topic.excerpt.to_s,
+        excerpt: plain_text_excerpt(topic.excerpt),
         created_at: topic.created_at,
         bumped_at: topic.bumped_at,
         posts_count: topic.posts_count,
@@ -640,7 +649,7 @@ module DiscourseCollection
         post_number: post.post_number,
         user_id: post.user_id,
         created_at:,
-        excerpt: post.excerpt,
+        excerpt: plain_text_excerpt(post.excerpt),
       }
     end
 
