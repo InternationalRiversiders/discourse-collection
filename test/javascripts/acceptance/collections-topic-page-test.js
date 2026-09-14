@@ -1,4 +1,4 @@
-import { click, fillIn, settled, visit } from "@ember/test-helpers";
+import { click, currentURL, fillIn, settled, visit } from "@ember/test-helpers";
 import { test } from "qunit";
 import { cloneJSON } from "discourse/lib/object";
 import topicFixtures from "discourse/tests/fixtures/topic";
@@ -125,6 +125,26 @@ acceptance("Collections topic page reverse lookup", function (needs) {
         },
       });
     });
+
+    // Following a row's name lands on the collection detail page, which loads the
+    // collection, its reading feed and its record of invitations.
+    server.get("/collections/12.json", () =>
+      helper.response(collectionShape(12, "Riverside reads", { teamworkers: [] }))
+    );
+
+    server.get("/collections/12/topics.json", () =>
+      helper.response({
+        topics: [],
+        meta: { page: 0, page_size: 30, more: false, total: 0 },
+      })
+    );
+
+    server.get("/collections/12/invites.json", () =>
+      helper.response({
+        invites: [],
+        meta: { page: 0, page_size: 30, more: false, total: 0 },
+      })
+    );
 
     server.post("/collections.json", (request) => {
       const body = new URLSearchParams(request.requestBody);
@@ -327,6 +347,27 @@ acceptance("Collections topic page reverse lookup", function (needs) {
     assert
       .dom(`${FEATURED} ${CHIP}`)
       .exists({ count: 1 }, "the reply loses the chip again");
+  });
+
+  test("opens a collection from its row", async function (assert) {
+    await visit(TOPIC_URL);
+    await settled();
+    await openManager(1);
+
+    assert
+      .dom('[data-collection-id="12"] .add-to-collection__name')
+      .containsText("Riverside reads", "the row carries the name");
+    assert
+      .dom('[data-collection-id="12"] .add-to-collection__name a')
+      .hasAttribute("href", "/collections/12", "linked to the collection");
+
+    await click('[data-collection-id="12"] .add-to-collection__name a');
+    await settled();
+
+    assert.equal(currentURL(), "/collections/12", "the link opens the collection");
+    assert
+      .dom(".add-to-collection")
+      .doesNotExist("and the picker goes away with the topic page");
   });
 
   test("creates a collection from the picker and comes back to it", async function (assert) {

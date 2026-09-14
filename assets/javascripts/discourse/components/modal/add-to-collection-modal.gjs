@@ -9,6 +9,8 @@ import DConditionalLoadingSpinner from "discourse/ui-kit/d-conditional-loading-s
 import DLoadMore from "discourse/ui-kit/d-load-more";
 import DModal from "discourse/ui-kit/d-modal";
 import { popupAjaxError } from "discourse/lib/ajax-error";
+import getURL from "discourse/lib/get-url";
+import { wantsNewWindow } from "discourse/lib/intercept-click";
 import { escapeExpression } from "discourse/lib/utilities";
 import { eq, includes } from "discourse/truth-helpers";
 import { i18n } from "discourse-i18n";
@@ -36,6 +38,7 @@ import {
  */
 export default class AddToCollectionModal extends Component {
   @service dialog;
+  @service router;
 
   @tracked collectedIds = [];
   @tracked collections = [];
@@ -69,6 +72,28 @@ export default class AddToCollectionModal extends Component {
   @action
   createCollection() {
     this.args.model.onCreate?.();
+  }
+
+  @action
+  collectionHref(collection) {
+    return getURL(`/collections/${collection.id}`);
+  }
+
+  // The row claims its own click, the way the list tiles do, rather than leaving the
+  // navigation to a <LinkTo>: this same click closes the picker, and a <LinkTo> that goes
+  // down with it hands its click back to the browser — a full page load, not a transition.
+  // Claiming it here also keeps the picker from outliving the page it opened, since the
+  // modal service leaves open modals alone when the route changes.
+  @action
+  openCollection(collection, event) {
+    // Modified clicks and the browser's own new tab are the href's to answer.
+    if (wantsNewWindow(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    this.close();
+    this.router.transitionTo("collectionsShow", collection.id);
   }
 
   @action
@@ -277,8 +302,16 @@ export default class AddToCollectionModal extends Component {
                     class="add-to-collection__row"
                     data-collection-id={{collection.id}}
                   >
+                    {{! The link rides inside the name cell instead of being it: the cell
+                    stretches over the row's spare space, which is not what a click in
+                    that space is aimed at. }}
                     <span class="add-to-collection__name">
-                      {{collection.name}}
+                      <a
+                        href={{this.collectionHref collection}}
+                        {{on "click" (fn this.openCollection collection)}}
+                      >
+                        {{collection.name}}
+                      </a>
                     </span>
                     <span class="add-to-collection__count">
                       {{dIcon "layer-group"}}

@@ -945,6 +945,20 @@
     flex: 1;
     min-width: 0;
     word-break: break-word;
+
+    // The name links into the collection, but an anchor is painted in the link colour, so a
+    // list of names would read as a list of links. It keeps the row's own colour and takes
+    // the link colour on hover instead.
+    a {
+      &:link,
+      &:visited {
+        color: inherit;
+      }
+
+      &:hover {
+        color: var(--tertiary);
+      }
+    }
   }
 
   &__count {
