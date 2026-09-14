@@ -2,7 +2,7 @@
 
 # name: discourse-collection
 # about: Public collections: signed-in users create topic collections, co-maintain them, feature selected replies, and subscribe to updates.
-# version: 1.2.1
+# version: 1.2.2
 # authors: 0x444858
 
 enabled_site_setting :collection_enabled
@@ -129,6 +129,18 @@ after_initialize do
   if defined?(DiscourseDataExplorer::DataExplorer)
     DiscourseDataExplorer::DataExplorer.singleton_class.prepend(
       DiscourseCollection::DataExplorerSchema::Patch,
+    )
+  end
+end
+
+# Data Explorer also decides how a *value* renders, and that mapping is hardcoded to
+# core's conventions too, so a `collection_id` column comes out as a bare number. Teach
+# it our type (lib/discourse_collection/data_explorer_relations.rb) — same reasoning for
+# hooking here rather than on :after_plugin_activation, and the same defined? guard.
+after_initialize do
+  if defined?(DiscourseDataExplorer::DataExplorer)
+    DiscourseCollection::DataExplorerRelations.register!(
+      DiscourseDataExplorer::DataExplorer,
     )
   end
 end
