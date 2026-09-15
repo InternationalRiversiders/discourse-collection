@@ -83,3 +83,5 @@ discourse_collection:
   collection_onebox_disabled_categories:
     default: ""
     type: category_list
+  collection_topic_added_notification_enabled:
+    default: true

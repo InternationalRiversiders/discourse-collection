@@ -51,6 +51,18 @@ RSpec.describe DiscourseCollection::TopicAddedNotificationBatch do
       expect(described_class.current?(collection.id, second)).to eq(true)
     end
 
+    it "schedules nothing when the notification is turned off" do
+      SiteSetting.collection_topic_added_notification_enabled = false
+      collect(topic:)
+
+      expect { register(topic:) }.not_to change(
+        Jobs::DiscourseCollection::NotifyTopicAdded.jobs,
+        :size,
+      )
+
+      expect(register(topic:)).to be_nil
+    end
+
     it "schedules nothing when the collect was already undone" do
       expect { register(topic:) }.not_to change(
         Jobs::DiscourseCollection::NotifyTopicAdded.jobs,

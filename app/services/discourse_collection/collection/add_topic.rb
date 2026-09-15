@@ -15,8 +15,9 @@ module DiscourseCollection
   # collection_max_topics_per_collection; the note is length-guarded (≤100) so the DB
   # column never raises. A fresh collect stamps the 21075 batch with the row it inserted and
   # schedules its flush from a post-transaction step, so subscribers eventually learn about
-  # the new topic; the idempotent re-collect neither opens a batch nor restarts the window
-  # (docs/09 §2).
+  # the new topic; with collection_topic_added_notification_enabled off that occurrence
+  # schedules nothing at all. The idempotent re-collect neither opens a batch nor restarts
+  # the window (docs/09 §2).
   class Collection::AddTopic
     include Service::Base
 

@@ -21,6 +21,7 @@ en:
     collection_unlimited_collections_role: "Select who may keep creating collections after reaching {{setting:collection_max_collections_per_user}}. Choose 'No one' to enforce the limit for everyone."
     collection_invite_validity_days: "How many days an invitation to become a co-maintainer or the owner stays acceptable after it is sent. Once this window passes, a still-unanswered invitation can no longer be accepted or rejected and shows as expired. Cannot exceed the history retention window, unless that is 0 (keep forever)."
     collection_invite_history_days: "How many days invitation records are kept after they are sent. Invitation records older than this are removed. Set to 0 to keep records forever. Otherwise must be at least as long as the validity window."
+    collection_topic_added_notification_enabled: "Send the subscribers of a collection a notification when a topic is collected into it. When disabled, collecting a topic notifies nobody and schedules nothing. Invitations are unaffected."
     errors:
       collection_name_min_length_range: "You cannot set the minimum collection name length above the maximum collection name length."
       collection_name_max_length_range: "You cannot set the maximum collection name length below the minimum collection name length."

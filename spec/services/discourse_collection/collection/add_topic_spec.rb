@@ -195,6 +195,19 @@ RSpec.describe DiscourseCollection::Collection::AddTopic do
       end
     end
 
+    context "when topic added notifications are turned off" do
+      before { SiteSetting.collection_topic_added_notification_enabled = false }
+
+      it "collects the topic without scheduling the flush" do
+        expect { result }.not_to change(
+          Jobs::DiscourseCollection::NotifyTopicAdded.jobs,
+          :size,
+        )
+
+        expect(membership).to be_present
+      end
+    end
+
     context "when the topic is already collected" do
       before { Fabricate(:collection_topic, collection:, topic:) }
 

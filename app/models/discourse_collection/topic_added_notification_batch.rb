@@ -30,8 +30,13 @@ module DiscourseCollection
       # Schedules the flush of a fresh collect (docs/09 §2). Called only for a collect that
       # actually inserted a row — an idempotent re-collect neither opens a batch nor
       # restarts the window. Returns the stamp the scheduled run is checked against, or nil
-      # when the row is already gone (a concurrent remove undid the collect).
+      # when the row is already gone (a concurrent remove undid the collect), or when the
+      # notification is turned off site-wide (collection_topic_added_notification_enabled):
+      # the gate sits in front of the enqueue, so a disabled feature schedules no run at all
+      # rather than one that stands down when it fires.
       def register!(collection:, actor_user_id:, topic:)
+        return unless SiteSetting.collection_topic_added_notification_enabled
+
         stamp = stamp_of(collection.id, topic.id)
         return if stamp.nil?
 

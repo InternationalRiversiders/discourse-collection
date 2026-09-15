@@ -21,6 +21,7 @@ zh_CN:
     collection_unlimited_collections_role: "选择谁可以在达到 {{setting:collection_max_collections_per_user}} 后继续创建专辑。选择「没有人」即为所有人执行该上限。"
     collection_invite_validity_days: "邀请（成为共同维护者或 owner）发出后多少天内仍可被接受/拒绝。超过此窗口仍未被受理的邀请不可再接受/拒绝，显示为已过期。不能超过历史保留期，除非历史保留期设为 0（永久保留）。"
     collection_invite_history_days: "邀请记录发出后保留多少天。超过该期限的邀请记录会被清理。设为 0 表示永久保留。其余情况下不能短于受理窗口。"
+    collection_topic_added_notification_enabled: "话题被收录进专辑时，向该专辑的订阅者发送通知。关闭后收录话题不再通知任何人，也不会排入发送任务。邀请通知不受影响。"
     errors:
       collection_name_min_length_range: "专辑名称的最小长度不能大于其最大长度。"
       collection_name_max_length_range: "专辑名称的最大长度不能小于其最小长度。"
