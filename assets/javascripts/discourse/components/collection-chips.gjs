@@ -1,5 +1,6 @@
 import Component from "@glimmer/component";
 import { LinkTo } from "@ember/routing";
+import emojiText from "../lib/emoji-text";
 
 // A row of collection chips: an optional label, one link per collection (each entry only
 // needs id and name), then whatever the caller yields — a trailing action, say. Callers
@@ -18,7 +19,7 @@ export default class CollectionChips extends Component {
           @route="collectionsShow"
           @model={{collection.id}}
         >
-          {{collection.name}}
+          {{emojiText collection.name}}
         </LinkTo>
       {{/each}}
       {{yield}}

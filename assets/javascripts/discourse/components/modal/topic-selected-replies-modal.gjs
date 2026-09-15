@@ -1,9 +1,9 @@
 import { array } from "@ember/helper";
 import { action } from "@ember/object";
+import { service } from "@ember/service";
 import Component from "@glimmer/component";
 import { LinkTo } from "@ember/routing";
 import { tracked } from "@glimmer/tracking";
-import { trustHTML } from "@ember/template";
 import didInsert from "@ember/render-modifiers/modifiers/did-insert";
 import DConditionalLoadingSpinner from "discourse/ui-kit/d-conditional-loading-spinner";
 import DLoadMore from "discourse/ui-kit/d-load-more";
@@ -12,12 +12,15 @@ import { popupAjaxError } from "discourse/lib/ajax-error";
 import { i18n } from "discourse-i18n";
 import CollectionUser from "../collection-user";
 import { listTopicSelectedReplies } from "../../lib/collection-api";
+import emojiText, { titleText } from "../../lib/emoji-text";
 
 // Full selected-reply list for one collected topic (docs/04 §2 overflow endpoint).
 // Opened from a row's "view all selected replies" entry when the inline window
 // reported has_more_selected_replies. Paginates post_id ASC beyond that window,
 // independent of collection_max_selected_replies_per_topic.
 export default class TopicSelectedRepliesModal extends Component {
+  @service siteSettings;
+
   @tracked replies = [];
   @tracked meta = { page: 0, page_size: 30, more: false, total: 0 };
   // uid -> user, the response's `users` map (docs/04 §1), merged across pages so
@@ -115,7 +118,10 @@ export default class TopicSelectedRepliesModal extends Component {
       <:body>
         <div class="topic-selected-replies" {{didInsert this.load}}>
           <p class="topic-selected-replies__topic">
-            {{trustHTML this.args.model.title}}
+            {{titleText
+              this.args.model.title
+              this.siteSettings.support_mixed_text_direction
+            }}
           </p>
 
           {{#if this.loading}}
@@ -147,7 +153,7 @@ export default class TopicSelectedRepliesModal extends Component {
                       }}
                     >
                       <span class="topic-selected-replies__reply-excerpt">
-                        {{reply.excerpt}}
+                        {{emojiText reply.excerpt}}
                       </span>
                     </LinkTo>
                   </li>

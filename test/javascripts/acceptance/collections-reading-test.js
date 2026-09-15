@@ -156,6 +156,25 @@ acceptance("Collections reading feed", function (needs) {
         meta: { page: 0, page_size: 30, more: false, total: 1 },
       })
     );
+    // Excerpts travel as plain text (docs/04 §1), emoji reduced to their shortcode by
+    // the server's own excerpting — so the row is what puts the image back. Titles
+    // arrive carrying a code too: core's fancy_title escapes the emoji, it does not
+    // draw it.
+    server.get("/collections/15.json", () =>
+      helper.response(fullShape(15, { name: "Emoji reads", topic_count: 1 }))
+    );
+    server.get("/collections/15/topics.json", () =>
+      helper.response({
+        topics: [
+          topicRow(104, "2026-06-03T08:00:00.000Z", {
+            topic: { fancy_title: "Reads :smile:", excerpt: "Excerpt :smile:" },
+            selected_replies: [{ ...reply(2, 77), excerpt: "Reply :smile:" }],
+          }),
+        ],
+        users: USERS,
+        meta: { page: 0, page_size: 30, more: false, total: 1 },
+      })
+    );
   });
 
   test("renders the reading feed under the detail header", async function (assert) {
@@ -328,6 +347,21 @@ acceptance("Collections reading feed", function (needs) {
       null,
       "and it is not nested inside the post link either"
     );
+  });
+
+  test("puts back the emoji a title and an excerpt carry", async function (assert) {
+    await visit("/collections/15");
+    await settled();
+
+    assert
+      .dom(".collection-topic__title img.emoji")
+      .exists("the topic's title draws its emoji");
+    assert
+      .dom(".collection-topic__excerpt img.emoji")
+      .exists("and so does its lead text");
+    assert
+      .dom(".collection-topic__reply-excerpt img.emoji")
+      .exists("and a featured reply's");
   });
 
   test("shows the empty state when the collection has no topics", async function (assert) {

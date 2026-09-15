@@ -1,5 +1,6 @@
 import Component from "@glimmer/component";
 import { i18n } from "discourse-i18n";
+import CollectionCreateButton from "./collection-create-button";
 import CollectionInviteCard from "./collection-invite-card";
 import CollectionTabs from "./collection-tabs";
 import DConditionalLoadingSpinner from "discourse/ui-kit/d-conditional-loading-spinner";
@@ -24,6 +25,7 @@ export default class CollectionInvitesPage extends Component {
               {{i18n "collections.invites.subtitle"}}
             </p>
           </div>
+          <CollectionCreateButton />
         </header>
 
         <DLoadMore

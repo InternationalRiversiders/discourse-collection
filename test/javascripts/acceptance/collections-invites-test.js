@@ -42,7 +42,13 @@ acceptance("Collections invites inbox", function (needs) {
   });
 
   needs.user();
-  needs.settings({ collection_enabled: true });
+  needs.settings({
+    collection_enabled: true,
+    // Read by the create form the inbox's own button opens.
+    collection_name_min_length: 3,
+    collection_name_max_length: 20,
+    collection_description_max_length: 200,
+  });
   needs.pretender((server, helper) => {
     server.get("/collections.json", () =>
       helper.response({
@@ -161,6 +167,15 @@ acceptance("Collections invites inbox", function (needs) {
     await settled();
 
     assert.strictEqual(currentURL(), "/collections/invites");
+  });
+
+  test("offers the create form from the inbox as well", async function (assert) {
+    await visit("/collections/invites");
+
+    assert.dom(".collection-list__new-button").exists();
+    await click(".collection-list__new-button");
+
+    assert.dom("#collection-form-name").exists("the inbox is not a dead end");
   });
 
   test("accepting a co-maintainer invitation asks first, then records it", async function (assert) {

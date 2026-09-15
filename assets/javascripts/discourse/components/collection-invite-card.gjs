@@ -6,6 +6,7 @@ import rawDate from "discourse/helpers/raw-date";
 import dFormatDate from "discourse/ui-kit/helpers/d-format-date";
 import { i18n } from "discourse-i18n";
 import CollectionInvitePerson from "./collection-invite-person";
+import emojiText from "../lib/emoji-text";
 
 // One invitation as the invitee reads it (docs/05 §2.4). The row answers "what am
 // I being asked, and by whom", "until when", and — for a transfer — who holds the
@@ -22,7 +23,7 @@ export default class CollectionInviteCard extends Component {
           @route="collectionsShow"
           @model={{@row.invite.collection.id}}
         >
-          {{@row.invite.collection.name}}
+          {{emojiText @row.invite.collection.name}}
         </LinkTo>
         <span class="collection-invite-status -{{@row.invite.status}}">
           {{@row.statusLabel}}

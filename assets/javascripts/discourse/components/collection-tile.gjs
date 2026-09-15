@@ -10,6 +10,7 @@ import dFormatDate from "discourse/ui-kit/helpers/d-format-date";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
 import dNumber from "discourse/ui-kit/helpers/d-number";
 import { i18n } from "discourse-i18n";
+import emojiText from "../lib/emoji-text";
 
 export default class CollectionTile extends Component {
   @service currentUser;
@@ -72,7 +73,7 @@ export default class CollectionTile extends Component {
       {{on "click" this.openCollection}}
     >
       <header class="collection-tile__header">
-        <h2 class="collection-tile__name">{{this.collection.name}}</h2>
+        <h2 class="collection-tile__name">{{emojiText this.collection.name}}</h2>
         {{#if this.roleLabel}}
           <span class="collection-tile__role {{this.roleClass}}">
             {{this.roleLabel}}
@@ -82,7 +83,7 @@ export default class CollectionTile extends Component {
 
       {{#if this.collection.description}}
         <p class="collection-tile__description">
-          {{this.collection.description}}
+          {{emojiText this.collection.description}}
         </p>
       {{/if}}
 

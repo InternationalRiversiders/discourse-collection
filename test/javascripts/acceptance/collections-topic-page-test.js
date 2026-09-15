@@ -50,6 +50,12 @@ function topicPayload() {
   const topic = cloneJSON(topicFixtures["/t/280/1.json"]);
   topic.collections = COLLECTIONS;
 
+  // What core's Topic#fancy_title hands over: the title escaped, with any emoji left
+  // as its code (`Emoji.unicode_unescape`). The picker header draws this string, so
+  // the emoji only becomes an image if the header unescapes it.
+  topic.title = "Internationalization :smile:";
+  topic.fancy_title = "Internationalization :smile:";
+
   const reply = topic.post_stream.posts.find((post) => post.post_number === 2);
   reply.selected_by_collection_ids = [30];
 
@@ -271,6 +277,19 @@ acceptance("Collections topic page reverse lookup", function (needs) {
     await click(`#post_2 ${SHOW_MORE}`);
 
     assert.dom(`#post_2 ${MENU_BUTTON}`).exists("a reply reveals it");
+  });
+
+  test("heads the picker with the topic's own title", async function (assert) {
+    await visit(TOPIC_URL);
+    await settled();
+    await openManager(1);
+
+    assert
+      .dom(".add-to-collection__topic")
+      .containsText("Internationalization", "the title reaches the header");
+    assert
+      .dom(".add-to-collection__topic img.emoji")
+      .exists("and its emoji code is drawn, not printed");
   });
 
   test("collects the topic without asking", async function (assert) {

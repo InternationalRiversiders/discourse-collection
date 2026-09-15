@@ -16,6 +16,7 @@ import dNumber from "discourse/ui-kit/helpers/d-number";
 import { and, eq } from "discourse/truth-helpers";
 import { i18n } from "discourse-i18n";
 import { INVITE_MAINTAINER, INVITE_OWNER } from "../lib/collection-api";
+import emojiText from "../lib/emoji-text";
 
 export default class CollectionDetailPage extends Component {
   @service currentUser;
@@ -134,7 +135,7 @@ export default class CollectionDetailPage extends Component {
 
         <header class="collection-detail__header">
           <div class="collection-detail__heading">
-            <h1 class="collection-detail__name">{{@controller.collectionName}}</h1>
+            <h1 class="collection-detail__name">{{emojiText @controller.collectionName}}</h1>
             {{#if @controller.roleLabel}}
               <span class="collection-detail__role {{@controller.roleClass}}">
                 {{@controller.roleLabel}}
@@ -158,7 +159,7 @@ export default class CollectionDetailPage extends Component {
 
           {{#if @controller.collectionDescription}}
             <p class="collection-detail__description">
-              {{@controller.collectionDescription}}
+              {{emojiText @controller.collectionDescription}}
             </p>
           {{/if}}
 

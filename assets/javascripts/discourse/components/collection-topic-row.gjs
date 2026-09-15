@@ -3,7 +3,6 @@ import { on } from "@ember/modifier";
 import { action } from "@ember/object";
 import { LinkTo } from "@ember/routing";
 import { service } from "@ember/service";
-import { trustHTML } from "@ember/template";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import CollectionUser from "./collection-user";
@@ -14,6 +13,7 @@ import dFormatDate from "discourse/ui-kit/helpers/d-format-date";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
 import dNumber from "discourse/ui-kit/helpers/d-number";
 import { i18n } from "discourse-i18n";
+import emojiText, { titleText } from "../lib/emoji-text";
 
 // Mirrors CollectionTopic::NOTE_MAX_LENGTH — the note column's own limit.
 const NOTE_MAX_LENGTH = 100;
@@ -29,6 +29,7 @@ const NOTE_MAX_LENGTH = 100;
 // own open/draft state.
 export default class CollectionTopicRow extends Component {
   @service modal;
+  @service siteSettings;
 
   @tracked editingNote = false;
   @tracked noteDraft = "";
@@ -154,7 +155,10 @@ export default class CollectionTopicRow extends Component {
           @route="topic"
           @models={{array this.topicSlug this.args.row.topic.id}}
         >
-          {{trustHTML this.args.row.topic.fancy_title}}
+          {{titleText
+            this.args.row.topic.fancy_title
+            this.siteSettings.support_mixed_text_direction
+          }}
         </LinkTo>
 
         {{#if this.category}}
@@ -220,7 +224,7 @@ export default class CollectionTopicRow extends Component {
           @route="topic"
           @models={{array this.topicSlug this.args.row.topic.id}}
         >
-          {{this.args.row.topic.excerpt}}
+          {{emojiText this.args.row.topic.excerpt}}
         </LinkTo>
       {{/if}}
 
@@ -289,7 +293,7 @@ export default class CollectionTopicRow extends Component {
                   }}
                 >
                   <span class="collection-topic__reply-excerpt">
-                    {{reply.excerpt}}
+                    {{emojiText reply.excerpt}}
                   </span>
                 </LinkTo>
                 {{#if this.canManageContent}}

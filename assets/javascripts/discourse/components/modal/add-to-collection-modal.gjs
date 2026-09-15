@@ -23,6 +23,7 @@ import {
   selectReplyInCollection,
   unselectReplyFromCollection,
 } from "../../lib/collection-api";
+import emojiText, { titleText } from "../../lib/emoji-text";
 
 /**
  * Collection manager opened from a post's action bar. Lists the collections the
@@ -43,6 +44,7 @@ import {
  */
 export default class AddToCollectionModal extends Component {
   @service router;
+  @service siteSettings;
 
   @tracked collectedIds = [];
   @tracked collections = [];
@@ -309,7 +311,12 @@ export default class AddToCollectionModal extends Component {
       </:headerBelowTitle>
       <:body>
         <div class="add-to-collection" {{didInsert this.load}}>
-          <p class="add-to-collection__topic">{{this.args.model.title}}</p>
+          <p class="add-to-collection__topic">
+            {{titleText
+              this.args.model.title
+              this.siteSettings.support_mixed_text_direction
+            }}
+          </p>
 
           {{#if this.loading}}
             <DConditionalLoadingSpinner @condition={{this.loading}} />
@@ -333,7 +340,7 @@ export default class AddToCollectionModal extends Component {
                         href={{this.collectionHref collection}}
                         {{on "click" (fn this.openCollection collection)}}
                       >
-                        {{collection.name}}
+                        {{emojiText collection.name}}
                       </a>
                     </span>
                     <span class="add-to-collection__count">

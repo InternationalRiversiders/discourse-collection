@@ -62,10 +62,13 @@ acceptance("Collections create modal", function (needs) {
     });
   });
 
-  test("does not show the create button on the public list", async function (assert) {
+  test("carries the create button on the public list too", async function (assert) {
     await visit("/collections");
 
-    assert.dom(".collection-list__new-button").doesNotExist();
+    assert.dom(".collection-list__new-button").exists();
+    await click(".collection-list__new-button");
+
+    assert.dom("#collection-form-name").exists("the same form opens from every list");
   });
 
   test("opens the create modal from the mine page and rejects a short name", async function (assert) {

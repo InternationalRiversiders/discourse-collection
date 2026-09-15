@@ -1,25 +1,20 @@
 import { concat, fn } from "@ember/helper";
 import { on } from "@ember/modifier";
 import Component from "@glimmer/component";
-import { action } from "@ember/object";
-import { service } from "@ember/service";
 import { eq } from "discourse/truth-helpers";
 import { i18n } from "discourse-i18n";
+import CollectionCreateButton from "./collection-create-button";
 import CollectionRoleHint from "./collection-role-hint";
 import CollectionTabs from "./collection-tabs";
 import CollectionTile from "./collection-tile";
-import CollectionFormModal from "./modal/collection-form-modal";
 import DConditionalLoadingSpinner from "discourse/ui-kit/d-conditional-loading-spinner";
 import DEmptyState from "discourse/ui-kit/d-empty-state";
 import DLoadMore from "discourse/ui-kit/d-load-more";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
 
 export default class CollectionListPage extends Component {
-  @service currentUser;
-  @service modal;
-
   get showCreate() {
-    return this.args.create && this.currentUser;
+    return Boolean(this.args.create);
   }
 
   // The profile's collections tab is the only caller that wants the note: every tile
@@ -36,11 +31,6 @@ export default class CollectionListPage extends Component {
 
   get showTabs() {
     return this.args.showTabs ?? true;
-  }
-
-  @action
-  openCreate() {
-    this.modal.show(CollectionFormModal, { model: { mode: "create" } });
   }
 
   <template>
@@ -60,14 +50,7 @@ export default class CollectionListPage extends Component {
             </p>
           </div>
           {{#if this.showCreate}}
-            <button
-              type="button"
-              class="collection-list__new-button btn btn-primary"
-              {{on "click" this.openCreate}}
-            >
-              {{dIcon "plus"}}
-              {{i18n "collections.new_button"}}
-            </button>
+            <CollectionCreateButton />
           {{/if}}
         </header>
 

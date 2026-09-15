@@ -31,7 +31,7 @@ acceptance("Collections mine and subscribed lists", function (needs) {
   needs.user();
   needs.pretender((server, helper) => {
     server.get("/collections/mine.json", () =>
-      helper.response(listResponse([collectionTile(1, { name: "Owned gems" })]))
+      helper.response(listResponse([collectionTile(1, { name: "Owned gems :smile:" })]))
     );
     server.get("/collections/subscribed.json", () =>
       helper.response(
@@ -46,7 +46,10 @@ acceptance("Collections mine and subscribed lists", function (needs) {
 
     assert.dom(".collection-tile").exists({ count: 1 });
     assert.dom(".collection-tile").containsText("Owned gems");
-    assert.dom(".collection-list__new-button").exists("the create button lives on the mine page");
+    assert
+      .dom(".collection-tile__name img.emoji")
+      .exists("a name carrying an emoji draws the image, not the shortcode");
+    assert.dom(".collection-list__new-button").exists("the create button lives here too");
     assert.dom('[data-link-name="collections-all"]').exists("the all-collections tab is present");
   });
 
@@ -55,7 +58,7 @@ acceptance("Collections mine and subscribed lists", function (needs) {
 
     assert.dom(".collection-tile").exists({ count: 1 });
     assert.dom(".collection-tile").containsText("Followed box");
-    assert.dom(".collection-list__new-button").doesNotExist("no create button on the subscribed page");
+    assert.dom(".collection-list__new-button").exists("every list tab carries the create button");
     assert.dom(".collection-list__sort-button").exists({ count: 4 }, "same four sort keys as the other lists");
     assert
       .dom(".collection-list__sort-button.-active")
