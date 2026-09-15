@@ -45,9 +45,11 @@ module DiscourseCollection
       step :rewrite_note
       step :touch_activity
     end
-    # Post-transaction (docs/10 / docs/06 §1): every successful staff overwrite is logged —
-    # the actor here is always staff (policy :staff). The no-key request is a pure no-op
-    # that writes nothing, so nothing is logged for it.
+    # Post-transaction (docs/10 / docs/06 §1): an overwrite made on staff standing is logged —
+    # the actor here is always staff (policy :staff), but one who owns or co-maintains the
+    # collection already holds the same edit through docs/04 §4, so theirs is routine
+    # management and goes unlogged. The no-key request is a pure no-op that writes nothing,
+    # so nothing is logged for it.
     step :audit_note_change
 
     private
@@ -87,11 +89,13 @@ module DiscourseCollection
       collection.update!(updated_at: Time.zone.now)
     end
 
-    # docs/10 §1: the actor is always staff here, so every successful overwrite is an
-    # admin action. new_value mirrors the stored note — an explicit null clears it to
-    # nil ("旧 → 空"), so the audit row records old note -> nil.
+    # docs/10 §1: an overwrite is an admin action unless the actor already holds the note
+    # edit as the collection's owner or co-maintainer (docs/04 §4) — then it is routine
+    # management and is not logged. new_value mirrors the stored note — an explicit null
+    # clears it to nil ("旧 → 空"), so the audit row records old note -> nil.
     def audit_note_change(collection:, membership:, params:, guardian:)
       return if params.note.equal?(NOTE_NOT_GIVEN)
+      return if CollectionPolicy.for(collection:, user: guardian.user).can_write_topics?
 
       StaffActionLogger.new(guardian.user).log_custom(
         :collection_topic_note_change,

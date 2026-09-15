@@ -496,6 +496,10 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  // The sentence takes the slack, the rest hugs the far edge. A wrapped line has no
+  // summary and so no auto margin — flex-end is what keeps the revoke button aligned
+  // once it has been pushed off the first line.
+  justify-content: flex-end;
   gap: 0.5rem;
 
   // The sentence wraps as one unit; only the parts after it break away.
@@ -503,6 +507,7 @@
     display: inline-flex;
     flex-wrap: wrap;
     align-items: center;
+    margin-inline-end: auto;
     gap: 0.35rem;
   }
 
@@ -512,7 +517,6 @@
   }
 
   &__date {
-    margin-left: auto;
     color: var(--primary-medium);
     font-size: var(--font-down-1);
   }

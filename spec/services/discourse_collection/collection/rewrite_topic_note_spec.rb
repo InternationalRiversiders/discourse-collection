@@ -141,6 +141,40 @@ RSpec.describe DiscourseCollection::Collection::RewriteTopicNote do
       end
     end
 
+    context "when an admin overwrites a note on a collection they own" do
+      let(:collection) { add_owned_collection(admin) }
+
+      it { is_expected.to run_successfully }
+
+      it "replaces the note" do
+        expect { result }.to change { membership.reload.note }.from("old").to("fixed")
+      end
+
+      it "logs nothing (the owner already holds the note edit, docs/10 §1)" do
+        expect { result }.not_to change {
+          UserHistory.where(custom_type: "collection_topic_note_change").count
+        }
+      end
+    end
+
+    context "when a moderator co-maintaining the collection overwrites a note" do
+      let(:actor) { moderator }
+      let(:collection) { add_owned_collection(owner) }
+
+      before do
+        SiteSetting.collection_moderators_can_manage_collections = false
+        Fabricate(:collection_teamworker, collection:, user: moderator, is_owner: false)
+      end
+
+      it { is_expected.to run_successfully }
+
+      it "logs nothing (a co-maintainer holds the note edit, docs/10 §1)" do
+        expect { result }.not_to change {
+          UserHistory.where(custom_type: "collection_topic_note_change").count
+        }
+      end
+    end
+
     context "when an admin clears the note with null" do
       let(:params) { { id: collection.id, topic_id: topic.id, note: nil } }
 

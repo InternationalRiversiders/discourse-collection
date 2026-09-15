@@ -136,6 +136,54 @@ RSpec.describe DiscourseCollection::Collection::Update do
       end
     end
 
+    context "when an admin renames a collection they own" do
+      let(:actor) { admin }
+      let(:collection) { add_owned_collection(admin) }
+
+      it { is_expected.to run_successfully }
+
+      it "renames the collection" do
+        expect { result }.to change { collection.reload.name }.from("Original").to("Renamed")
+      end
+
+      it "logs nothing (staff standing was not needed, docs/10 §1)" do
+        expect { result }.not_to change {
+          UserHistory.where(custom_type: "collection_name_change").count
+        }
+      end
+    end
+
+    context "when an admin changes the description of a collection they own" do
+      let(:actor) { admin }
+      let(:collection) { add_owned_collection(admin) }
+      let(:params) { { id: collection.id, description: "new desc" } }
+
+      before { collection.update!(description: "old desc") }
+
+      it { is_expected.to run_successfully }
+
+      it "logs nothing (staff standing was not needed, docs/10 §1)" do
+        expect { result }.not_to change {
+          UserHistory.where(custom_type: "collection_intro_change").count
+        }
+      end
+    end
+
+    context "when an admin co-maintaining the collection renames it" do
+      let(:actor) { admin }
+      let(:collection) { add_owned_collection(owner) }
+
+      before { Fabricate(:collection_teamworker, collection:, user: admin, is_owner: false) }
+
+      it { is_expected.to run_successfully }
+
+      it "logs the name change (a co-maintainer holds no metadata edit of their own)" do
+        expect { result }.to change {
+          UserHistory.where(custom_type: "collection_name_change").count
+        }.by(1)
+      end
+    end
+
     context "when staff resubmit the same name" do
       let(:actor) { admin }
       let(:params) { { id: collection.id, name: "Original" } }

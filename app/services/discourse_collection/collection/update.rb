@@ -67,10 +67,10 @@ module DiscourseCollection
       step :apply_metadata_changes
       step :save_metadata_changes
     end
-    # Post-transaction (docs/10): a successful staff rename / intro edit is an admin
+    # Post-transaction (docs/10): a rename / intro edit made on staff standing is an admin
     # action and is logged to user_histories once the transaction commits (a rolled-back
-    # run never reaches here). Non-staff owner / co-maintainer routine edits are not
-    # admin actions and are not logged.
+    # run never reaches here). Edits the actor could have made as the collection's own
+    # owner are routine management and are not logged.
     step :audit_metadata_changes
 
     private
@@ -100,16 +100,18 @@ module DiscourseCollection
       collection.save!
     end
 
-    # docs/10: whether an edit is an "admin action" hinges only on the actor being
-    # staff — a staff member renaming their own collection is still logged; non-staff
-    # owner / co-maintainer edits never reach here (the policy above lets them through,
-    # the audit step skips them). Only values that actually changed are recorded: a PUT
-    # resubmitting the same name still bumps updated_at but administers nothing.
-    # `context` holds the collection-name snapshot; on a rename that is the pre-rename
-    # name, so an older row keeps naming the collection as it was then (docs/10 §2).
+    # docs/10: an edit is an "admin action" only when the actor needed their staff
+    # standing for it — a staff member editing a collection they own is doing routine
+    # owner management (the policy above lets them through as owner alone), so nothing
+    # is logged. Non-staff owner edits never reach here (the audit step skips them).
+    # Only values that actually changed are recorded: a PUT resubmitting the same name
+    # still bumps updated_at but administers nothing. `context` holds the
+    # collection-name snapshot; on a rename that is the pre-rename name, so an older row
+    # keeps naming the collection as it was then (docs/10 §2).
     def audit_metadata_changes(collection:, params:, guardian:)
       actor = guardian.user
       return unless actor&.staff?
+      return if CollectionPolicy.for(collection:, user: actor).owner?
 
       previous_name = context[:previous_name]
       if params.name && previous_name != collection.name
