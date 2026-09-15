@@ -157,17 +157,21 @@ acceptance("Collections topic page reverse lookup", function (needs) {
       return helper.response(createdCollection);
     });
 
+    // Both writes answer with the collection's full shape (docs/04 §3 / §5), counters
+    // included; the picker row reads its count back from here rather than counting.
     server.post("/collections/:id/topics.json", (request) => {
       requests.posted.push(request.params.id);
       return helper.response(
-        collectionShape(Number(request.params.id), "Morning links")
+        collectionShape(Number(request.params.id), "Morning links", {
+          topic_count: 1,
+        })
       );
     });
 
     server.delete("/collections/:id/topics/:topic_id.json", (request) => {
       requests.removed.push(request.params.id);
       return helper.response(
-        collectionShape(Number(request.params.id), "Quotes")
+        collectionShape(Number(request.params.id), "Quotes", { topic_count: 2 })
       );
     });
 
@@ -276,6 +280,9 @@ acceptance("Collections topic page reverse lookup", function (needs) {
     assert
       .dom('[data-collection-id="40"] .add-to-collection__action')
       .hasText(i18n("collections.topic.collect"));
+    assert
+      .dom('[data-collection-id="40"] .add-to-collection__count')
+      .hasText("0", "the row carries the collection's topic count");
 
     await clickRowAction(40);
 
@@ -286,6 +293,9 @@ acceptance("Collections topic page reverse lookup", function (needs) {
 
     assert.deepEqual(requests.posted, ["40"], "posts the picked collection");
     assert.dom(".add-to-collection").exists("the manager stays open");
+    assert
+      .dom('[data-collection-id="40"] .add-to-collection__count')
+      .hasText("1", "the row takes the count the write answered with");
     assert
       .dom(`${COLLECTED} ${CHIP}`)
       .exists({ count: 3 }, "the new chip appears without reloading the topic");
@@ -301,6 +311,9 @@ acceptance("Collections topic page reverse lookup", function (needs) {
     await acceptDialog(".dialog-footer .btn-danger");
 
     assert.deepEqual(requests.removed, ["30"], "deletes the membership");
+    assert
+      .dom('[data-collection-id="30"] .add-to-collection__count')
+      .hasText("2", "the row drops to the count the write answered with");
     assert
       .dom(`${COLLECTED} ${CHIP}`)
       .exists({ count: 1 }, "the chip goes from the first post");

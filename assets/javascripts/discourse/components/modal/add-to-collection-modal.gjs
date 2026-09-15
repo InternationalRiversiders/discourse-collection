@@ -163,7 +163,8 @@ export default class AddToCollectionModal extends Component {
       messageKey: "collections.topic.confirm_collect",
       labelKey: "collections.topic.collect",
       request: () => addTopicToCollection(collection.id, this.args.model.topicId),
-      flip: () => {
+      flip: (updated) => {
+        this.#replaceCollection(updated);
         this.collectedIds = [...this.collectedIds, collection.id];
         this.args.model.onCollect?.({
           id: collection.id,
@@ -199,7 +200,8 @@ export default class AddToCollectionModal extends Component {
       danger: true,
       request: () =>
         removeTopicFromCollection(collection.id, this.args.model.topicId),
-      flip: () => {
+      flip: (updated) => {
+        this.#replaceCollection(updated);
         this.collectedIds = this.collectedIds.filter(
           (id) => id !== collection.id
         );
@@ -246,13 +248,22 @@ export default class AddToCollectionModal extends Component {
 
     this.pendingId = collection.id;
     try {
-      await request();
-      flip();
+      flip(await request());
     } catch (err) {
       popupAjaxError(err);
     } finally {
       this.pendingId = null;
     }
+  }
+
+  // The rows are a snapshot of the list endpoint, and the picker outlives the action it
+  // reports, so a row's counters are brought up to date from the write's own response —
+  // the collection's full shape (docs/04 §3 / §5) — rather than being guessed at locally.
+  // Reassigning the array is what re-renders the row.
+  #replaceCollection(updated) {
+    this.collections = this.collections.map((item) =>
+      item.id === updated.id ? { ...item, ...updated } : item
+    );
   }
 
   // A collection created through this modal's own entry point holds no topics yet, so the
@@ -266,7 +277,12 @@ export default class AddToCollectionModal extends Component {
       return collections;
     }
 
-    return [created, ...collections.filter((item) => item.id !== created.id)];
+    // The row already held wins over the form's snapshot: the picker refreshes rows from
+    // write responses, and re-pinning must not undo that with the shape the form kept.
+    const pinned =
+      collections.find((item) => item.id === created.id) ?? created;
+
+    return [pinned, ...collections.filter((item) => item.id !== created.id)];
   }
 
   <template>
