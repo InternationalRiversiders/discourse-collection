@@ -426,4 +426,67 @@ RSpec.describe DiscourseCollection::CollectionsController do
       expect(reply).to have_key("excerpt")
     end
   end
+
+  describe "#selected_replies_count" do
+    let(:collection) { build_collection(owner: other_user) }
+
+    before { sign_in(user) }
+
+    it "counts every row, including one the visitor cannot see" do
+      topic, posts = reply_topic(collection, count: 3)
+      collect(collection, topic, has_selected_reply: true)
+      posts.each { |post| select_reply(collection, post, topic:) }
+      posts.first.update_column(:deleted_at, Time.zone.now)
+
+      get "/collections/#{collection.id}/topics/#{topic.id}/selected_replies.json"
+      expect(response.parsed_body["selected_replies"].length).to eq(2)
+
+      get "/collections/#{collection.id}/topics/#{topic.id}/selected_replies/count.json"
+
+      expect(response.status).to eq(200)
+      # The count is what the removal would cascade away, so it stays a total rather
+      # than the visible number above (docs/04 §7).
+      expect(response.parsed_body).to eq({ "selected_reply_count" => 3 })
+    end
+
+    it "returns zero for a collected topic without selected replies" do
+      topic = Fabricate(:topic)
+      collect(collection, topic)
+
+      get "/collections/#{collection.id}/topics/#{topic.id}/selected_replies/count.json"
+
+      expect(response.parsed_body).to eq({ "selected_reply_count" => 0 })
+    end
+
+    it "returns 404 when the topic is not collected in the collection" do
+      alien_topic = Fabricate(:topic)
+
+      get "/collections/#{collection.id}/topics/#{alien_topic.id}/selected_replies/count.json"
+
+      expect(response.status).to eq(404)
+    end
+
+    it "returns 404 for a topic the visitor cannot see" do
+      topic = Fabricate(:private_message_topic)
+      collect(collection, topic)
+
+      get "/collections/#{collection.id}/topics/#{topic.id}/selected_replies/count.json"
+
+      expect(response.status).to eq(404)
+    end
+
+    context "when anonymous access is disabled" do
+      before { SiteSetting.collection_allow_anonymous = false }
+      before { delete "/session/#{user.encoded_username}" }
+
+      it "rejects anonymous visitors with a 404" do
+        topic = Fabricate(:topic)
+        collect(collection, topic, has_selected_reply: true)
+
+        get "/collections/#{collection.id}/topics/#{topic.id}/selected_replies/count.json"
+
+        expect(response.status).to eq(404)
+      end
+    end
+  end
 end

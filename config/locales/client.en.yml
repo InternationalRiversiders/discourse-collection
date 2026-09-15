@@ -183,8 +183,7 @@ en:
         save_note: "Save"
         cancel_note: "Cancel"
         note_placeholder: "Add a note"
-        confirm_remove_topic: "Remove this topic from the collection? Its selected replies (if any) go with it."
-        confirm_unfeature_reply: "Unfeature this reply?"
+        confirm_remove_topic: "Remove this topic from the collection? Its %{count} selected replies are deleted with it, and that cannot be undone."
       # Topic page reverse lookup (docs/07). `collected_in` sits under the
       # first post, `featured_in` under any reply some collection featured. The post
       # action bar entry manages a topic's membership on the first post and a reply's
@@ -201,10 +200,8 @@ en:
         feature: "Feature"
         unfeature: "Unfeature"
         feature_requires_topic: "Collect the topic first"
-        confirm_collect: "Collect this topic into “%{name}”?"
-        confirm_uncollect: "Remove this topic from “%{name}”? Its selected replies (if any) go with it."
-        confirm_feature: "Feature this reply in “%{name}”?"
-        confirm_unfeature: "Unfeature this reply in “%{name}”?"
+        remove_title: "Remove this topic?"
+        confirm_uncollect: "Remove this topic from “%{name}”? Its %{count} selected replies are deleted with it, and that cannot be undone."
         picker_empty: "You have not created or been invited to any collection yet."
       stats:
         topic_count: "Topics"

@@ -11,13 +11,13 @@ import DModal from "discourse/ui-kit/d-modal";
 import { popupAjaxError } from "discourse/lib/ajax-error";
 import getURL from "discourse/lib/get-url";
 import { wantsNewWindow } from "discourse/lib/intercept-click";
-import { escapeExpression } from "discourse/lib/utilities";
 import { eq, includes } from "discourse/truth-helpers";
 import { i18n } from "discourse-i18n";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
 import dNumber from "discourse/ui-kit/helpers/d-number";
 import {
   addTopicToCollection,
+  countTopicSelectedReplies,
   listMyCollections,
   removeTopicFromCollection,
   selectReplyInCollection,
@@ -27,9 +27,14 @@ import {
 /**
  * Collection manager opened from a post's action bar. Lists the collections the
  * acting user maintains and acts on one of them per click — the topic's membership
- * on the first post, the reply's featured state on any other post. Every action
- * confirms first and the modal stays open so a run of collections can be edited
- * without reopening it.
+ * on the first post, the reply's featured state on any other post.
+ *
+ * Collecting and featuring are reversible, so they just happen; the modal stays open
+ * so a run of collections can be edited without reopening it. Un-collecting is the one
+ * write that takes the topic's selected replies down with it (docs/04 §5), so it asks
+ * how many rows are at stake first (docs/04 §7) and hands the warning to its caller when
+ * there are any — that confirmation carries a "view" entry and is a modal of its own,
+ * which would replace this picker.
  *
  * Its header also carries the way to create a collection. The form is a modal of its
  * own and the modal service holds one at a time, so the picker hands the chore to its
@@ -37,7 +42,6 @@ import {
  * components/post-menu).
  */
 export default class AddToCollectionModal extends Component {
-  @service dialog;
   @service router;
 
   @tracked collectedIds = [];
@@ -159,9 +163,7 @@ export default class AddToCollectionModal extends Component {
 
   @action
   async collect(collection) {
-    await this.#apply(collection, {
-      messageKey: "collections.topic.confirm_collect",
-      labelKey: "collections.topic.collect",
+    await this.#write(collection, {
       request: () => addTopicToCollection(collection.id, this.args.model.topicId),
       flip: (updated) => {
         this.#replaceCollection(updated);
@@ -176,9 +178,7 @@ export default class AddToCollectionModal extends Component {
 
   @action
   async feature(collection) {
-    await this.#apply(collection, {
-      messageKey: "collections.topic.confirm_feature",
-      labelKey: "collections.topic.feature",
+    await this.#write(collection, {
       request: () =>
         selectReplyInCollection(
           collection.id,
@@ -194,10 +194,30 @@ export default class AddToCollectionModal extends Component {
 
   @action
   async uncollect(collection) {
-    await this.#apply(collection, {
-      messageKey: "collections.topic.confirm_uncollect",
-      labelKey: "collections.topic.uncollect",
-      danger: true,
+    this.pendingId = collection.id;
+    let count;
+    try {
+      const payload = await countTopicSelectedReplies(
+        collection.id,
+        this.args.model.topicId
+      );
+      count = payload.selected_reply_count;
+    } catch (err) {
+      popupAjaxError(err);
+      return;
+    } finally {
+      this.pendingId = null;
+    }
+
+    // Rows to lose means the read of this topic's selected replies matters, and that
+    // warning carries a "view" entry — so the caller runs it, and reopens this picker
+    // when the exchange is over.
+    if (count > 0) {
+      this.args.model.onCascadingUncollect?.(collection, count);
+      return;
+    }
+
+    await this.#write(collection, {
       request: () =>
         removeTopicFromCollection(collection.id, this.args.model.topicId),
       flip: (updated) => {
@@ -214,10 +234,7 @@ export default class AddToCollectionModal extends Component {
 
   @action
   async unfeature(collection) {
-    await this.#apply(collection, {
-      messageKey: "collections.topic.confirm_unfeature",
-      labelKey: "collections.topic.unfeature",
-      danger: true,
+    await this.#write(collection, {
       request: () =>
         unselectReplyFromCollection(
           collection.id,
@@ -233,19 +250,9 @@ export default class AddToCollectionModal extends Component {
     });
   }
 
-  async #apply(collection, { messageKey, labelKey, danger, request, flip }) {
-    // The dialog renders the message as trusted HTML, and a collection name is user
-    // text, so it is escaped before interpolation.
-    const confirmed = await this.dialog.confirm({
-      message: i18n(messageKey, { name: escapeExpression(collection.name) }),
-      confirmButtonLabel: labelKey,
-      confirmButtonClass: danger ? "btn-danger" : "btn-primary",
-    });
-
-    if (!confirmed) {
-      return;
-    }
-
+  // Only the row that is being written locks; the rest of the list stays usable, which is
+  // what lets a run of collections be edited without reopening the picker.
+  async #write(collection, { request, flip }) {
     this.pendingId = collection.id;
     try {
       flip(await request());

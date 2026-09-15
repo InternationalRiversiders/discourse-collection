@@ -5,7 +5,10 @@ import { tracked } from "@glimmer/tracking";
 import { popupAjaxError } from "discourse/lib/ajax-error";
 import { i18n } from "discourse-i18n";
 import CollectionOwnerCollectionsModal from "../components/modal/collection-owner-collections-modal";
+import RemoveTopicModal from "../components/modal/remove-topic-modal";
+import TopicSelectedRepliesModal from "../components/modal/topic-selected-replies-modal";
 import {
+  countTopicSelectedReplies,
   deleteCollection,
   listCollectionInvites,
   listCollectionTopics,
@@ -432,13 +435,23 @@ export default class CollectionsShowController extends Controller {
   }
 
   // docs/04 §5 — drops the row and refreshes the header counters from the full-shape response.
+  // This is the only entry that cascades rows away for good, so it asks how many are at
+  // stake first (docs/04 §7) and only stops for a confirmation when there are any.
   @action
   async removeTopic(row) {
-    const confirmed = await this.#confirm({
-      messageKey: "collections.reading.confirm_remove_topic",
-      labelKey: "collections.topic.uncollect",
-    });
-    if (!confirmed) {
+    let count;
+    try {
+      const payload = await countTopicSelectedReplies(
+        this.model.id,
+        row.topic.id
+      );
+      count = payload.selected_reply_count;
+    } catch (err) {
+      popupAjaxError(err);
+      return false;
+    }
+
+    if (count > 0 && !(await this.#confirmCascadeRemoval(row, count))) {
       return false;
     }
 
@@ -462,17 +475,10 @@ export default class CollectionsShowController extends Controller {
 
   // docs/04 §4 remove — the response is the whole reading-page row recomputed server-side
   // (inline replies capped, has_more_selected_replies re-probed), so it replaces the
-  // row rather than being merged.
+  // row rather than being merged. Reversible — featuring the reply again restores it — so
+  // unlike the removal above, this one doesn't stop to ask.
   @action
   async unfeatureReply(row, reply) {
-    const confirmed = await this.#confirm({
-      messageKey: "collections.reading.confirm_unfeature_reply",
-      labelKey: "collections.topic.unfeature",
-    });
-    if (!confirmed) {
-      return false;
-    }
-
     this.pendingTopicId = row.topic.id;
     try {
       const updated = await unselectReplyFromCollection(
@@ -608,6 +614,30 @@ export default class CollectionsShowController extends Controller {
   // message-vs-label asymmetry of core's dialog.
   #confirm({ messageKey, labelKey, replacements = {} }) {
     return confirmAction(this.dialog, { messageKey, labelKey, replacements });
+  }
+
+  // The cascade warning needs a "view" entry, so it is a modal of its own — and the list
+  // it opens is one too, while the modal service holds one at a time. Hence the loop: the
+  // confirmation is put back after every look, until the reader confirms or backs out.
+  async #confirmCascadeRemoval(row, count) {
+    while (true) {
+      const result = await this.modal.show(RemoveTopicModal, {
+        model: { messageKey: "collections.reading.confirm_remove_topic", count },
+      });
+
+      if (!result?.viewReplies) {
+        return result?.confirmed === true;
+      }
+
+      await this.modal.show(TopicSelectedRepliesModal, {
+        model: {
+          collectionId: this.model.id,
+          topicId: row.topic.id,
+          slug: row.topic.slug,
+          title: row.topic.fancy_title,
+        },
+      });
+    }
   }
 
   // One teammate row locks while its removal is in flight; the rest of the page

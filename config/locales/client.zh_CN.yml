@@ -158,8 +158,7 @@ zh_CN:
         save_note: "保存"
         cancel_note: "取消"
         note_placeholder: "添加备注"
-        confirm_remove_topic: "从该淘专辑移除该话题？其精选回复（若有）也会一并移除。"
-        confirm_unfeature_reply: "取消精选该回复？"
+        confirm_remove_topic: "从该淘专辑移除该话题？其 %{count} 条精选回复也会一并删除，且无法恢复。"
       stats:
         topic_count: "话题数"
         subscriber_count: "订阅数"
@@ -176,10 +175,8 @@ zh_CN:
         feature: "精选"
         unfeature: "取消精选"
         feature_requires_topic: "需先收录该话题"
-        confirm_collect: "将该话题收录进「%{name}」？"
-        confirm_uncollect: "从「%{name}」移除该话题？其精选回复（若有）也会一并移除。"
-        confirm_feature: "在「%{name}」中精选该回复？"
-        confirm_unfeature: "取消在「%{name}」中精选该回复？"
+        remove_title: "移除该话题？"
+        confirm_uncollect: "从「%{name}」移除该话题？其 %{count} 条精选回复也会一并删除，且无法恢复。"
         picker_empty: "你还没有创建或受邀共同维护任何淘专辑。"
     notifications:
       titles:

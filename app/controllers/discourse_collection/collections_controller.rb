@@ -4,7 +4,8 @@ module DiscourseCollection
   class CollectionsController < BaseController
     # Read access gate only for the public read actions. `mine` always requires a
     # logged-in user (it is scoped to "me"), so it checks that inside the action.
-    before_action :ensure_read_access, only: %i[index show subscribers topics selected_replies]
+    before_action :ensure_read_access,
+                  only: %i[index show subscribers topics selected_replies selected_replies_count]
     # Write endpoints always require login; the owner/staff permission matrix is then
     # enforced per action by the service policies.
     before_action :ensure_write_access,
@@ -456,6 +457,26 @@ module DiscourseCollection
         users: users_json(entries.map { |entry| entry[:user_id] }),
         meta: pagination_meta(page, page_size, total),
       }
+    end
+
+    # docs/04 §7 GET /collections/:id/topics/:topic_id/selected_replies/count.json — the row
+    # count behind the removal warning. Every row of the pair is counted, a soft-deleted
+    # post's row included: what this answers is "how many rows the removal would cascade
+    # away", which is a total and not what the visitor may see — the same stance as
+    # topic_count. One COUNT, served by the (collection_id, topic_id, post_id) index.
+    def selected_replies_count
+      collection = find_collection(params[:id])
+      membership =
+        CollectionTopic.find_by(collection_id: collection.id, topic_id: params[:topic_id])
+      raise Discourse::NotFound if membership.blank?
+
+      topic = Topic.find_by(id: membership.topic_id)
+      raise Discourse::NotFound if topic.blank? || !guardian.can_see_topic?(topic)
+
+      count =
+        CollectionTopicSelectedReply.where(collection_id: collection.id, topic_id: topic.id).count
+
+      render json: { selected_reply_count: count }
     end
 
     private

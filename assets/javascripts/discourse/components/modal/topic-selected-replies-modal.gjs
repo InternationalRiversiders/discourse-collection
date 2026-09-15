@@ -32,6 +32,12 @@ export default class TopicSelectedRepliesModal extends Component {
     return this.meta.more && !this.loading && !this.loadingMore;
   }
 
+  // Core's topic route renders /t/:slug/:id with "-" standing in for a missing slug, and
+  // the fallback lives here so every caller can hand over topic.slug as it is.
+  get slug() {
+    return this.args.model.slug || "-";
+  }
+
   // Same lookup the page controller offers its rows, against this modal's own map.
   // @action is load-bearing: a template-called method must be bound.
   @action
@@ -135,7 +141,7 @@ export default class TopicSelectedRepliesModal extends Component {
                       class="topic-selected-replies__reply-link"
                       @route="topic.fromParamsNear"
                       @models={{array
-                        this.args.model.slug
+                        this.slug
                         this.args.model.topicId
                         reply.post_number
                       }}

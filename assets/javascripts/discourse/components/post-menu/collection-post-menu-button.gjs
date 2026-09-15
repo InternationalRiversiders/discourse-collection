@@ -1,9 +1,13 @@
 import { action } from "@ember/object";
 import { service } from "@ember/service";
 import Component from "@glimmer/component";
+import { popupAjaxError } from "discourse/lib/ajax-error";
 import DButton from "discourse/ui-kit/d-button";
 import AddToCollectionModal from "../modal/add-to-collection-modal";
 import CollectionFormModal from "../modal/collection-form-modal";
+import RemoveTopicModal from "../modal/remove-topic-modal";
+import TopicSelectedRepliesModal from "../modal/topic-selected-replies-modal";
+import { removeTopicFromCollection } from "../../lib/collection-api";
 
 /**
  * Post action bar entry for collections (docs/07). Every post carries it: on
@@ -103,6 +107,58 @@ export default class CollectionPostMenuButton extends Component {
     this.#showPicker(created);
   }
 
+  // Un-collecting is the one picker action whose confirmation the picker cannot run
+  // itself: that warning shows how many selected replies the removal would cascade away
+  // and offers a look at them, so it is a modal of its own — and showing it takes the
+  // picker down with it (the modal service holds one modal at a time). The exchange runs
+  // here and the picker comes back afterwards, as it does around the create form.
+  async #uncollectTopic(collection, count) {
+    const confirmed =
+      count === 0 || (await this.#confirmCascade(collection, count));
+
+    if (confirmed) {
+      try {
+        await removeTopicFromCollection(collection.id, this.#topic.id);
+        this.#removeFromTopic(collection.id);
+      } catch (err) {
+        popupAjaxError(err);
+      }
+    }
+
+    if (!this.isDestroyed) {
+      this.#showPicker(null);
+    }
+  }
+
+  // Both halves of the exchange are modals of their own, so the confirmation is put back
+  // after every look, until the reader confirms or backs out.
+  async #confirmCascade(collection, count) {
+    const topic = this.#topic;
+
+    while (true) {
+      const result = await this.modal.show(RemoveTopicModal, {
+        model: {
+          messageKey: "collections.topic.confirm_uncollect",
+          name: collection.name,
+          count,
+        },
+      });
+
+      if (!result?.viewReplies) {
+        return result?.confirmed === true;
+      }
+
+      await this.modal.show(TopicSelectedRepliesModal, {
+        model: {
+          collectionId: collection.id,
+          topicId: topic.id,
+          slug: topic.slug,
+          title: topic.fancy_title,
+        },
+      });
+    }
+  }
+
   #removeFromTopic(collectionId) {
     this.#topic.collections = this.#topicCollections.filter(
       (held) => held.id !== collectionId
@@ -140,6 +196,8 @@ export default class CollectionPostMenuButton extends Component {
           mode: "topic",
           onCollect: (collection) => this.#addToTopic(collection),
           onUncollect: (collectionId) => this.#removeFromTopic(collectionId),
+          onCascadingUncollect: (collection, count) =>
+            this.#uncollectTopic(collection, count),
         }
       : {
           ...shared,

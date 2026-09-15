@@ -66,6 +66,15 @@ export function listTopicSelectedReplies(id, topicId, options = {}) {
   });
 }
 
+// docs/04 §7 how many selected-reply rows this (collection, topic) pair holds, asked before
+// the removal of docs/04 §5 because that removal is the one write that cascades rows away
+// for good. A row total, not a visible count: it is what the cascade would drop.
+export function countTopicSelectedReplies(id, topicId) {
+  return ajax(
+    `/collections/${id}/topics/${topicId}/selected_replies/count.json`
+  );
+}
+
 // docs/04 §3 collect a topic into a collection (owner/teamworker only). Idempotent: a
 // repeat call is a 200 no-op rather than an error, which is why the picker marks
 // already-collected collections instead of relying on a failure. Resolves to the

@@ -12,7 +12,7 @@ Signed-in users can create collections, collect any topic on the forum into them
 
 - **Collecting**: create a collection and collect any topic into it, with an optional note on each entry; a topic page shows which collections the topic has been added to.
 
-- **Featured replies**: feature the good replies in a topic into a collection. The collection reading page shows them inline under each topic, and expands the full set when a topic has more than the inline limit.
+- **Featured replies**: feature the good replies in a topic into a collection. The collection reading page shows them inline under each topic, and expands the full set when a topic has more than the inline limit. Removing a topic takes its featured replies with it and cannot be undone, so the removal says how many are at stake and offers to show them first.
 
 - **Subscribing and notifications**: any signed-in user can subscribe to a collection. When new topics are collected into it, subscribers get a native Discourse notification (additions made close together are merged into a single one, rather than arriving one by one).
 

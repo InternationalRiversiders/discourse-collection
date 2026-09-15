@@ -69,11 +69,6 @@ async function clickRowAction(collectionId) {
   await settled();
 }
 
-async function acceptDialog(selector = ".dialog-footer .btn-primary") {
-  await click(selector);
-  await settled();
-}
-
 acceptance("Collections topic page reverse lookup", function (needs) {
   const requests = { posted: [], removed: [], patched: [], created: [] };
   let createdCollection = null;
@@ -107,6 +102,12 @@ acceptance("Collections topic page reverse lookup", function (needs) {
         collectionShape(30, "Quotes"),
         collectionShape(40, "Morning links", { topic_count: 0 }),
       ];
+
+      // Un-collecting reopens the picker, which refetches this list, so the count of a
+      // collection that was just freed comes from here on the second pass.
+      if (requests.removed.includes("30")) {
+        collections[1].topic_count = 2;
+      }
 
       // A collection that was just created holds no topics, so the endpoint's ordering
       // (last topic added, newest first) really does put it last; the picker is expected
@@ -167,6 +168,17 @@ acceptance("Collections topic page reverse lookup", function (needs) {
         })
       );
     });
+
+    // The un-collect entry asks how many selected replies the removal would cascade away
+    // before it bothers anyone (docs/04 §7): 30 features the reply above, the rest hold
+    // none.
+    server.get(
+      "/collections/:id/topics/:topic_id/selected_replies/count.json",
+      (request) =>
+        helper.response({
+          selected_reply_count: request.params.id === "30" ? 2 : 0,
+        })
+    );
 
     server.delete("/collections/:id/topics/:topic_id.json", (request) => {
       requests.removed.push(request.params.id);
@@ -261,7 +273,7 @@ acceptance("Collections topic page reverse lookup", function (needs) {
     assert.dom(`#post_2 ${MENU_BUTTON}`).exists("a reply reveals it");
   });
 
-  test("collects the topic after confirming", async function (assert) {
+  test("collects the topic without asking", async function (assert) {
     await visit(TOPIC_URL);
     await settled();
     await openManager(1);
@@ -286,11 +298,9 @@ acceptance("Collections topic page reverse lookup", function (needs) {
 
     await clickRowAction(40);
 
-    assert.dom(".dialog-body").exists("the action confirms first");
-    assert.deepEqual(requests.posted, [], "nothing is sent before confirming");
-
-    await acceptDialog();
-
+    // Collecting is reversible — the same row frees the topic again — so it goes through
+    // on the click.
+    assert.dom(".dialog-body").doesNotExist("no confirmation to sit through");
     assert.deepEqual(requests.posted, ["40"], "posts the picked collection");
     assert.dom(".add-to-collection").exists("the manager stays open");
     assert
@@ -308,18 +318,44 @@ acceptance("Collections topic page reverse lookup", function (needs) {
     await openManager(1);
 
     await clickRowAction(30);
-    await acceptDialog(".dialog-footer .btn-danger");
+
+    // This one takes the featured reply down with it and cannot be undone, so it warns
+    // with the count it would drop (docs/04 §7).
+    assert.dom(".remove-topic-modal").exists("the cascade warns first");
+    assert
+      .dom(".remove-topic__message")
+      .hasText(i18n("collections.topic.confirm_uncollect", { name: "Quotes", count: 2 }));
+    assert.deepEqual(requests.removed, [], "nothing is sent before the confirm");
+
+    await click(".remove-topic__confirm");
+    await settled();
 
     assert.deepEqual(requests.removed, ["30"], "deletes the membership");
     assert
       .dom('[data-collection-id="30"] .add-to-collection__count')
-      .hasText("2", "the row drops to the count the write answered with");
+      .hasText("2", "the picker comes back showing what the list now reports");
     assert
       .dom(`${COLLECTED} ${CHIP}`)
       .exists({ count: 1 }, "the chip goes from the first post");
     assert
       .dom(FEATURED)
       .doesNotExist("the reply loses the collection featuring it");
+  });
+
+  test("un-collects a topic holding no selected replies without asking", async function (assert) {
+    await visit(TOPIC_URL);
+    await settled();
+    await openManager(1);
+
+    await clickRowAction(12);
+
+    assert
+      .dom(".remove-topic-modal")
+      .doesNotExist("nothing would be lost, so nothing to warn about");
+    assert.deepEqual(requests.removed, ["12"], "deletes the membership");
+    assert
+      .dom('[data-collection-id="12"] .add-to-collection__action')
+      .hasText(i18n("collections.topic.collect"), "the row flips in place");
   });
 
   test("features and unfeatures a reply", async function (assert) {
@@ -338,7 +374,6 @@ acceptance("Collections topic page reverse lookup", function (needs) {
       .hasText(i18n("collections.topic.unfeature"));
 
     await clickRowAction(12);
-    await acceptDialog();
 
     assert.deepEqual(
       requests.patched,
@@ -350,8 +385,9 @@ acceptance("Collections topic page reverse lookup", function (needs) {
       .exists({ count: 2 }, "the reply gains a chip without a refetch");
 
     await clickRowAction(30);
-    await acceptDialog(".dialog-footer .btn-danger");
 
+    // Featuring is reversible — the same row takes it back — so neither direction asks.
+    assert.dom(".dialog-body").doesNotExist("no confirmation in either direction");
     assert.deepEqual(requests.patched[1], {
       id: "30",
       mode: "remove",

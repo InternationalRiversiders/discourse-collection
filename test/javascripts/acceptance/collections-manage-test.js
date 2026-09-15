@@ -11,8 +11,10 @@ const OTHER_OWNER = { id: 20, username: "ana", name: "Ana" };
 const FIRST_ROW = ".collection-topics__list .collection-topic:first-child";
 // The second row is the one carrying inline replies, so it owns the unfeature entry.
 const SECOND_ROW = ".collection-topics__list .collection-topic:nth-child(2)";
-const DIALOG = ".dialog-body";
-const DIALOG_CONFIRM = ".dialog-footer .btn-danger";
+// The cascade warning is a modal of its own rather than a dialog, because it carries the
+// count and a way to look at what is about to go.
+const REMOVE_MODAL = ".remove-topic-modal";
+const REMOVE_CONFIRM = ".remove-topic__confirm";
 
 function fullShape(id, overrides = {}) {
   return {
@@ -112,6 +114,25 @@ acceptance("Collections reading management — maintainer", function (needs) {
     );
     server.get("/collections/12/topics.json", () => helper.response(FEED));
 
+    // How many selected replies a removal would cascade away (docs/04 §7): only the row
+    // that carries them has anything to warn about.
+    server.get(
+      "/collections/:id/topics/:topic_id/selected_replies/count.json",
+      (request) =>
+        helper.response({
+          selected_reply_count: request.params.topic_id === "102" ? 2 : 0,
+        })
+    );
+
+    // The overflow pager behind the warning's "view" entry.
+    server.get("/collections/12/topics/102/selected_replies.json", () =>
+      helper.response({
+        selected_replies: [reply(4, 42), reply(5, 77)],
+        users: USERS,
+        meta: { page: 0, page_size: 30, more: false, total: 2 },
+      })
+    );
+
     server.delete("/collections/12/topics/101.json", () => {
       requests.deleted.push(101);
       return helper.response(
@@ -119,6 +140,16 @@ acceptance("Collections reading management — maintainer", function (needs) {
           name: "Riverside reads",
           topic_count: 1,
           last_topic_added_at: ROW_WITH_REPLIES.added_at,
+        })
+      );
+    });
+    server.delete("/collections/12/topics/102.json", () => {
+      requests.deleted.push(102);
+      return helper.response(
+        fullShape(12, {
+          name: "Riverside reads",
+          topic_count: 1,
+          last_topic_added_at: ROW_WITH_NOTE.added_at,
         })
       );
     });
@@ -154,51 +185,92 @@ acceptance("Collections reading management — maintainer", function (needs) {
     assert.dom(".collection-topic__view-all").exists("the overflow entry survives");
   });
 
-  test("removes a collected topic after confirming", async function (assert) {
+  test("removes a topic holding selected replies after confirming", async function (assert) {
+    await visit("/collections/12");
+    await settled();
+
+    await click(`${SECOND_ROW} .collection-topic__remove`);
+
+    // This is the one entry whose cascade cannot be undone, so it says how many rows go
+    // with it rather than asking blindly.
+    assert.dom(REMOVE_MODAL).exists("the removal asks first");
+    assert
+      .dom(".remove-topic__message")
+      .hasText(
+        i18n("collections.reading.confirm_remove_topic", { count: 2 }),
+        "the warning carries the count"
+      );
+    assert
+      .dom(REMOVE_CONFIRM)
+      .hasText(i18n("collections.topic.uncollect"), "the confirm button is labelled, not a raw key");
+    assert.strictEqual(requests.deleted.length, 0, "nothing is sent before the confirm");
+
+    await click(REMOVE_CONFIRM);
+    await settled();
+
+    assert.deepEqual(requests.deleted, [102]);
+    assert.dom(".collection-topic").exists({ count: 1 });
+    assert.dom(".collection-topics__list").containsText("Riverside topic 101");
+    assert
+      .dom(".collection-detail__stat:first-of-type dd")
+      .hasText("1", "the header topic count follows the write");
+  });
+
+  test("removes a topic holding no selected replies without asking", async function (assert) {
     await visit("/collections/12");
     await settled();
 
     await click(`${FIRST_ROW} .collection-topic__remove`);
-    assert.dom(DIALOG).exists("the removal asks first");
-    assert
-      .dom(DIALOG_CONFIRM)
-      .hasText(i18n("collections.topic.uncollect"), "the confirm button is labelled, not a raw key");
-    assert.strictEqual(requests.deleted.length, 0, "nothing is sent before the confirm");
-
-    await click(DIALOG_CONFIRM);
     await settled();
 
+    assert
+      .dom(REMOVE_MODAL)
+      .doesNotExist("nothing would be lost, so nothing to warn about");
     assert.deepEqual(requests.deleted, [101]);
     assert.dom(".collection-topic").exists({ count: 1 });
-    assert.dom(".collection-topics__list").containsText("Riverside topic 102");
+  });
+
+  test("returns to the removal confirm after looking at the replies", async function (assert) {
+    await visit("/collections/12");
+    await settled();
+
+    await click(`${SECOND_ROW} .collection-topic__remove`);
+    await click(".remove-topic__view");
+    await settled();
+
     assert
-      .dom(".collection-detail__stat:first-of-type dd")
-      .hasText("1", "the header topic count follows the write");
+      .dom(".topic-selected-replies")
+      .exists("the view entry opens the overflow pager");
+    assert.dom(REMOVE_MODAL).doesNotExist("which takes the confirm down with it");
+
+    await click(".modal-close");
+    await settled();
+
+    assert.dom(REMOVE_MODAL).exists("and the confirm is back once the look is over");
+    assert.strictEqual(requests.deleted.length, 0);
   });
 
   test("keeps the topic when the removal confirm is dismissed", async function (assert) {
     await visit("/collections/12");
     await settled();
 
-    await click(`${FIRST_ROW} .collection-topic__remove`);
-    await click(".dialog-footer .btn-default");
+    await click(`${SECOND_ROW} .collection-topic__remove`);
+    await click(".remove-topic__cancel");
     await settled();
 
     assert.strictEqual(requests.deleted.length, 0);
     assert.dom(".collection-topic").exists({ count: 2 });
   });
 
-  test("unfeatures an inline reply after confirming", async function (assert) {
+  test("unfeatures an inline reply without asking", async function (assert) {
     await visit("/collections/12");
     await settled();
 
     await click(`${SECOND_ROW} .collection-topic__unfeature`);
-    assert.dom(DIALOG).exists();
-    assert.strictEqual(requests.patched.length, 0, "nothing is sent before the confirm");
-
-    await click(DIALOG_CONFIRM);
     await settled();
 
+    // Featuring the reply again restores the row, so this one doesn't stop to ask.
+    assert.dom(".dialog-body").doesNotExist("no confirmation to sit through");
     assert.strictEqual(requests.patched.length, 1);
     assert.true(
       requests.patched[0].body.includes("selected_replies"),
