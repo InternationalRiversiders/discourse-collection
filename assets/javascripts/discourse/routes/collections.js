@@ -1,4 +1,5 @@
 import DiscourseRoute from "discourse/routes/discourse";
+import { i18n } from "discourse-i18n";
 import { listCollections } from "../lib/collection-api";
 
 export default class CollectionsRoute extends DiscourseRoute {
@@ -21,5 +22,9 @@ export default class CollectionsRoute extends DiscourseRoute {
       collections: model.collections,
       meta: model.meta,
     });
+  }
+
+  titleToken() {
+    return i18n("collections.nav_name");
   }
 }

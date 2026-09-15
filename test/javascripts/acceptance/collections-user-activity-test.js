@@ -83,6 +83,16 @@ acceptance("Collections profile activity tab", function (needs) {
   test("renders the user's collections with the list page's tiles", async function (assert) {
     await visit("/u/eviltrout/activity/collections");
 
+    assert.strictEqual(
+      document.title,
+      [
+        i18n("collections.nav_name"),
+        i18n("user.activity_stream"),
+        "eviltrout",
+        this.siteSettings.title,
+      ].join(" - "),
+      "our segment opens the title, and core's ancestors supply the rest"
+    );
     assert.strictEqual(requests.length, 1, "one page requested");
     assert.strictEqual(requests[0].username, "eviltrout", "filtered by the profile's user");
     assert.strictEqual(requests[0].sort, undefined, "the order is fixed server-side");

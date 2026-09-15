@@ -1,6 +1,7 @@
 import { currentURL, visit } from "@ember/test-helpers";
 import { test } from "qunit";
 import { acceptance } from "discourse/tests/helpers/qunit-helpers";
+import { i18n } from "discourse-i18n";
 
 function collectionTile(id, overrides = {}) {
   return {
@@ -51,6 +52,15 @@ acceptance("Collections mine and subscribed lists", function (needs) {
       .exists("a name carrying an emoji draws the image, not the shortcode");
     assert.dom(".collection-list__new-button").exists("the create button lives here too");
     assert.dom('[data-link-name="collections-all"]').exists("the all-collections tab is present");
+    assert.strictEqual(
+      document.title,
+      [
+        i18n("collections.nav_name"),
+        i18n("collections.tabs.mine"),
+        this.siteSettings.title,
+      ].join(" - "),
+      "the tab is told apart from the other lists"
+    );
   });
 
   test("shows the collections the user subscribes to", async function (assert) {
@@ -63,6 +73,15 @@ acceptance("Collections mine and subscribed lists", function (needs) {
     assert
       .dom(".collection-sort__button.-active")
       .containsText("Recently updated", "defaults to last_topic_added_at desc");
+    assert.strictEqual(
+      document.title,
+      [
+        i18n("collections.nav_name"),
+        i18n("collections.tabs.subscribed"),
+        this.siteSettings.title,
+      ].join(" - "),
+      "the tab is told apart from the other lists"
+    );
   });
 });
 

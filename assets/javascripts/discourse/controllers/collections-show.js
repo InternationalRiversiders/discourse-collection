@@ -541,6 +541,8 @@ export default class CollectionsShowController extends Controller {
   applyMetadata(collection) {
     this.collectionName = collection.name;
     this.collectionDescription = collection.description;
+    // The document title reads the name too, so re-collect it (the route's titleToken).
+    this.send("refreshTitle");
   }
 
   // The owner's full list is one modal away (docs/03 §3): it pages through the collection

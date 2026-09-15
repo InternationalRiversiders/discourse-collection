@@ -1,5 +1,6 @@
 import { service } from "@ember/service";
 import DiscourseRoute from "discourse/routes/discourse";
+import { i18n } from "discourse-i18n";
 import { listCollections } from "../../lib/collection-api";
 
 /**
@@ -35,5 +36,11 @@ export default class UserActivityCollectionsRoute extends DiscourseRoute {
       collections: model.collections,
       meta: model.meta,
     });
+  }
+
+  // Only our own segment: core's `user` and `userActivity` ancestors already contribute
+  // the username and the activity stream, so naming the user here would print them twice.
+  titleToken() {
+    return i18n("collections.nav_name");
   }
 }

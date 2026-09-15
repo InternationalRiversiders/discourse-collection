@@ -1,5 +1,6 @@
 import { service } from "@ember/service";
 import DiscourseRoute from "discourse/routes/discourse";
+import { i18n } from "discourse-i18n";
 import { listMyInvites } from "../lib/collection-api";
 
 export default class CollectionsInvitesRoute extends DiscourseRoute {
@@ -24,5 +25,9 @@ export default class CollectionsInvitesRoute extends DiscourseRoute {
       invites: model.invites,
       meta: model.meta,
     });
+  }
+
+  titleToken() {
+    return [i18n("collections.nav_name"), i18n("collections.tabs.invites")];
   }
 }

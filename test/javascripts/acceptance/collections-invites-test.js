@@ -92,6 +92,15 @@ acceptance("Collections invites inbox", function (needs) {
     await visit("/collections/invites");
     await settled();
 
+    assert.strictEqual(
+      document.title,
+      [
+        i18n("collections.nav_name"),
+        i18n("collections.tabs.invites"),
+        this.siteSettings.title,
+      ].join(" - "),
+      "the inbox is told apart from the other lists"
+    );
     assert.dom(".collection-invite-card").exists({ count: 6 });
 
     assert

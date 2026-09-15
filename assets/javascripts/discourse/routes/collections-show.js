@@ -1,5 +1,6 @@
 import { service } from "@ember/service";
 import DiscourseRoute from "discourse/routes/discourse";
+import { i18n } from "discourse-i18n";
 import { getCollection } from "../lib/collection-api";
 import { READING_SORT_DEFAULT } from "../lib/reading-sort";
 
@@ -62,5 +63,19 @@ export default class CollectionsShowRoute extends DiscourseRoute {
     });
     controller.loadTopics();
     controller.loadInvites();
+  }
+
+  // The name comes from the controller rather than the model: an edit (docs/05 §1)
+  // replaces the page's copy there, and applyMetadata() re-collects the title from it.
+  titleToken() {
+    const name =
+      this.controllerFor("collectionsShow")?.collectionName ||
+      this.modelFor("collectionsShow")?.name;
+
+    if (!name) {
+      return;
+    }
+
+    return [name, i18n("collections.nav_name")];
   }
 }

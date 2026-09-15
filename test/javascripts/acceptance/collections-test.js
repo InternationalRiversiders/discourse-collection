@@ -64,10 +64,21 @@ acceptance("Collections list", function (needs) {
   test("clicking a tile opens the collection detail page", async function (assert) {
     await visit("/collections");
 
+    assert.strictEqual(
+      document.title,
+      `${i18n("collections.nav_name")} - ${this.siteSettings.title}`,
+      "the tab names the page, then core appends the site title"
+    );
+
     await click(".collection-tile");
 
     assert.strictEqual(currentURL(), "/collections/1");
     assert.dom(".collection-detail__name").hasText("Riverside gems");
+    assert.strictEqual(
+      document.title,
+      `Riverside gems - ${i18n("collections.nav_name")} - ${this.siteSettings.title}`,
+      "the detail tab leads with the collection's own name"
+    );
   });
 
   test("opens the owner's card from a tile without leaving the list", async function (assert) {

@@ -117,6 +117,11 @@ acceptance("Collections metadata — owner", function (needs) {
     assert.dom(".collection-detail__name").hasText("Riverside reads");
     assert.dom(".collection-detail__description").hasText("What I kept");
     assert.dom("#collection-form-name").doesNotExist("the modal closes on save");
+    assert.strictEqual(
+      document.title,
+      `Riverside reads - ${i18n("collections.nav_name")} - ${this.siteSettings.title}`,
+      "the tab picks the new name up without a reload"
+    );
   });
 
   test("rejects a too-short name without sending the write", async function (assert) {
