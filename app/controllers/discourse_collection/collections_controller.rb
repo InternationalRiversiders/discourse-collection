@@ -363,9 +363,12 @@ module DiscourseCollection
     end
 
     # docs/04 §1 GET /collections/:id/topics.json — the collection reading page (core read
-    # endpoint). Paginates the collected topics ordered by collection_topics.created_at
-    # (default desc). The paging window is narrowed in SQL to the topics the visitor may
-    # *list* (visible_topics_scope: category read-access + core's rule for unlisted
+    # endpoint). Paginates the collected topics ordered by one of three keys (whitelist
+    # below, default added_at desc): the collection time, the topic's own creation time or
+    # its latest activity — the latter two live on the joined topics row. Every key carries
+    # collection_topics.topic_id as a same-direction tie-breaker, so paging stays stable
+    # when two rows share a value. The paging window is narrowed in SQL to the topics the
+    # visitor may *list* (visible_topics_scope: category read-access + core's rule for unlisted
     # topics) *before* offset/limit, so rows the visitor may not list never occupy window
     # slots and paging yields contiguous visible rows (no holes / empty mid pages).
     # meta.total still counts the full collected set, so a restricted visitor may see
@@ -380,7 +383,7 @@ module DiscourseCollection
       collection = find_collection(params[:id])
       page, page_size = pagination_params
 
-      direction = topics_direction
+      sort, order = sort_and_order(allowed: TOPIC_SORT_COLUMNS, default: TOPIC_SORT_DEFAULT)
       scope =
         CollectionTopic
           .where(collection_id: collection.id)
@@ -390,9 +393,7 @@ module DiscourseCollection
 
       total = scope.count
       memberships =
-        scope
-          .where(topic_id: visible_topics_scope.select(:id))
-          .order(Arel.sql("collection_topics.created_at #{direction}, collection_topics.topic_id #{direction}"))
+        apply_topic_order(scope.where(topic_id: visible_topics_scope.select(:id)), sort, order)
           .offset(page * page_size)
           .limit(page_size)
           .to_a
@@ -497,6 +498,22 @@ module DiscourseCollection
       "subscriber_count" => "collections.subscribers_count",
     }.freeze
 
+    # Sortable keys for the reading page (docs/04 §1). All three columns are NOT NULL, so
+    # unlike the list endpoints there is no null placement to decide.
+    TOPIC_SORT_COLUMNS = %w[added_at topic_created_at topic_bumped_at].freeze
+
+    TOPIC_SORT_DEFAULT = "added_at"
+
+    # API sort key mapped to the column it orders by: the membership's own created_at, or
+    # a topics column reached through the join #topics always makes. `bumped_at` is core's
+    # latest-activity timestamp (the column core's own topic lists order by); the order
+    # fragment below interpolates the mapped column, never the raw sort key.
+    TOPIC_SORT_KEY_TO_COLUMN = {
+      "added_at" => "collection_topics.created_at",
+      "topic_created_at" => "topics.created_at",
+      "topic_bumped_at" => "topics.bumped_at",
+    }.freeze
+
     # Collections in which `user` holds any teamworker row (is_owner rows count too), i.e.
     # created-by OR maintained-by (docs/03 §3 / docs/04 §6).
     def user_collections_scope(user)
@@ -585,13 +602,16 @@ module DiscourseCollection
       rows.map { |row| serializer.new(row, scope: guardian, root: false, **options).as_json }
     end
 
-    # docs/04 §1 query has no `sort` key — only `order` over collection_topics.created_at
-    # (default desc = newest collection first, docs/04 §1). Unknown value -> 400.
-    def topics_direction
-      order = params[:order].presence || "desc"
-      raise Discourse::InvalidParameters.new(:order) unless %w[asc desc].include?(order)
+    # docs/04 §1 reading-page order: `sort` picks the key (whitelisted upstream), `order`
+    # the direction (default desc = newest first). topic_id is appended in the same
+    # direction — unique within the collection, it gives rows sharing a sort value a total
+    # order, so paging can neither repeat nor skip one. The mapping resolves the key to a
+    # column, so the fragment is a constant, never user input.
+    def apply_topic_order(scope, sort, order)
+      direction = order == "desc" ? "DESC" : "ASC"
+      column = TOPIC_SORT_KEY_TO_COLUMN.fetch(sort)
 
-      order == "asc" ? "ASC" : "DESC"
+      scope.order(Arel.sql("#{column} #{direction}, collection_topics.topic_id #{direction}"))
     end
 
     # Topics the visitor may *list* on the reading page (docs/04 §1): category

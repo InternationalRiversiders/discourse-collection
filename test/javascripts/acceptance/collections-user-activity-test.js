@@ -107,7 +107,7 @@ acceptance("Collections profile activity tab", function (needs) {
     assert
       .dom(".collection-list__tabs")
       .doesNotExist("the collection list views are elsewhere");
-    assert.dom(".collection-list__sort-button").doesNotExist("the order is not up to the viewer");
+    assert.dom(".collection-sort__button").doesNotExist("the order is not up to the viewer");
     assert.dom(".collection-list__new-button").doesNotExist("collections are created on the mine page");
   });
 

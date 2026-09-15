@@ -1,41 +1,29 @@
-import { on } from "@ember/modifier";
+import CollectionSortBar from "./collection-sort-bar";
 import CollectionTopicRow from "./collection-topic-row";
 import DConditionalLoadingSpinner from "discourse/ui-kit/d-conditional-loading-spinner";
 import DEmptyState from "discourse/ui-kit/d-empty-state";
 import DLoadMore from "discourse/ui-kit/d-load-more";
-import dIcon from "discourse/ui-kit/helpers/d-icon";
-import { eq } from "discourse/truth-helpers";
 import { i18n } from "discourse-i18n";
 
 // The collection reading feed (docs/04 §1): paginated collected topics below the
-// detail header, newest-add first by default with an asc/desc toggle. Data and
-// paging live on the page controller; this stays a thin view over it.
+// detail header, newest-add first by default, sortable by that key, by the topic's
+// creation time or by its latest activity. Data and paging live on the page
+// controller; this stays a thin view over it.
 export default <template>
   <section class="collection-topics">
     <header class="collection-topics__header">
       <h2 class="collection-topics__heading">
         {{i18n "collections.reading.heading"}}
       </h2>
-      <div class="collection-topics__order">
-        <span class="collection-topics__order-label">
-          {{i18n "collections.reading.order_label"}}
-        </span>
-        <button
-          type="button"
-          class="collection-topics__order-toggle"
-          title={{if
-            (eq @controller.topicsOrder "asc")
-            (i18n "collections.order_asc")
-            (i18n "collections.order_desc")
-          }}
-          {{on "click" @controller.toggleTopicsOrder}}
-        >
-          {{dIcon (if (eq @controller.topicsOrder "asc") "arrow-up" "arrow-down")}}
-          {{i18n
-            (if (eq @controller.topicsOrder "asc") "collections.order_asc" "collections.order_desc")
-          }}
-        </button>
-      </div>
+      <CollectionSortBar
+        @fields={{@controller.topicsSortFields}}
+        @labelKey="collections.reading.sort_label"
+        @labelPrefix="collections.reading.sort."
+        @onChangeSort={{@controller.changeTopicsSort}}
+        @onToggleOrder={{@controller.toggleTopicsOrder}}
+        @order={{@controller.topicsOrder}}
+        @sort={{@controller.topicsSort}}
+      />
     </header>
 
     {{#if @controller.loadingTopics}}

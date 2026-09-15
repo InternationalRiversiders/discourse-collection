@@ -14,12 +14,13 @@ import dIcon from "discourse/ui-kit/helpers/d-icon";
 import dNumber from "discourse/ui-kit/helpers/d-number";
 import { i18n } from "discourse-i18n";
 import emojiText, { titleText } from "../lib/emoji-text";
+import { readingSortTime } from "../lib/reading-sort";
 
 // Mirrors CollectionTopic::NOTE_MAX_LENGTH — the note column's own limit.
 const NOTE_MAX_LENGTH = 100;
 
 // One collected-topic row on the reading page (docs/04 §1): the topic link, its
-// post count and add time, then the optional public note and up to
+// post count and its time, then the optional public note and up to
 // collection_max_selected_replies_per_topic inline selected replies. Rows with
 // has_more_selected_replies=true get a "view all" entry that opens the overflow
 // pager modal.
@@ -69,6 +70,12 @@ export default class CollectionTopicRow extends Component {
   get category() {
     const categoryId = this.args.row.topic.category_id;
     return categoryId ? Category.findById(categoryId) : undefined;
+  }
+
+  // The row prints the time of the key the feed is ordered by, so the list order and
+  // the timestamps on it agree (docs/04 §1).
+  get sortTime() {
+    return readingSortTime(this.args.controller.topicsSort, this.args.row);
   }
 
   // @action because a template-called method must be bound, and this build's parser
@@ -178,9 +185,9 @@ export default class CollectionTopicRow extends Component {
             {{dNumber this.args.row.topic.posts_count}}
           </span>
           <span class="collection-topic__added">
-            {{i18n "collections.reading.added"}}
+            {{this.sortTime.label}}
             {{dFormatDate
-              this.args.row.added_at
+              this.sortTime.value
               format="medium"
               leaveAgo="true"
             }}

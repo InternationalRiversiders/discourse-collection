@@ -80,13 +80,34 @@
     margin-bottom: 0.75rem;
   }
 
-  &__sort {
+  &__total {
+    margin: 0 0 0.5rem;
+    color: var(--primary-medium);
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+}
+
+// The sort toolbar shared by the collection lists and the reading feed, so its classes
+// name neither of them.
+.collection-sort {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+
+  &__fields {
     display: inline-flex;
     flex-wrap: wrap;
     gap: 0.25rem;
   }
 
-  &__sort-button {
+  &__button {
     padding: 0.3em 0.75em;
     border: 1px solid var(--primary-low);
     border-radius: 100px;
@@ -121,18 +142,6 @@
       color: var(--primary);
       background: var(--primary-low);
     }
-  }
-
-  &__total {
-    margin: 0 0 0.5rem;
-    color: var(--primary-medium);
-  }
-
-  &__grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 0.75rem;
-    align-items: stretch;
   }
 }
 
@@ -703,35 +712,6 @@
   &__heading {
     margin: 0;
     font-size: var(--font-up-1);
-  }
-
-  // The feed sorts on one key only (docs/04 §1), so the label names it.
-  &__order {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  &__order-label {
-    color: var(--primary-medium);
-    font-size: var(--font-down-1);
-  }
-
-  &__order-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.3em 0.75em;
-    border: 1px solid transparent;
-    border-radius: 100px;
-    color: var(--primary-medium);
-    background: transparent;
-    cursor: pointer;
-
-    &:hover {
-      color: var(--primary);
-      background: var(--primary-low);
-    }
   }
 
   &__list {

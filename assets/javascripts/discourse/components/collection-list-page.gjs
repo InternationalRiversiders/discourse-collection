@@ -1,16 +1,13 @@
-import { concat, fn } from "@ember/helper";
-import { on } from "@ember/modifier";
 import Component from "@glimmer/component";
-import { eq } from "discourse/truth-helpers";
 import { i18n } from "discourse-i18n";
 import CollectionCreateButton from "./collection-create-button";
 import CollectionRoleHint from "./collection-role-hint";
+import CollectionSortBar from "./collection-sort-bar";
 import CollectionTabs from "./collection-tabs";
 import CollectionTile from "./collection-tile";
 import DConditionalLoadingSpinner from "discourse/ui-kit/d-conditional-loading-spinner";
 import DEmptyState from "discourse/ui-kit/d-empty-state";
 import DLoadMore from "discourse/ui-kit/d-load-more";
-import dIcon from "discourse/ui-kit/helpers/d-icon";
 
 export default class CollectionListPage extends Component {
   get showCreate() {
@@ -60,41 +57,15 @@ export default class CollectionListPage extends Component {
 
         {{#if this.showSort}}
           <div class="collection-list__toolbar">
-            <div
-              class="collection-list__sort"
-              role="group"
-              aria-label={{i18n "collections.sort_label"}}
-            >
-              {{#each @controller.sortFields as |field|}}
-                <button
-                  type="button"
-                  class={{if
-                    (eq @controller.sort field)
-                    "collection-list__sort-button -active"
-                    "collection-list__sort-button"
-                  }}
-                  aria-pressed={{eq @controller.sort field}}
-                  {{on "click" (fn @controller.changeSort field)}}
-                >
-                  {{i18n (concat "collections.sort." field)}}
-                </button>
-              {{/each}}
-            </div>
-            <button
-              type="button"
-              class="collection-list__order-toggle"
-              title={{if
-                (eq @controller.order "asc")
-                (i18n "collections.order_asc")
-                (i18n "collections.order_desc")
-              }}
-              {{on "click" @controller.toggleOrder}}
-            >
-              {{dIcon (if (eq @controller.order "asc") "arrow-up" "arrow-down")}}
-              {{i18n
-                (if (eq @controller.order "asc") "collections.order_asc" "collections.order_desc")
-              }}
-            </button>
+            <CollectionSortBar
+              @fields={{@controller.sortFields}}
+              @labelKey="collections.sort_label"
+              @labelPrefix="collections.sort."
+              @onChangeSort={{@controller.changeSort}}
+              @onToggleOrder={{@controller.toggleOrder}}
+              @order={{@controller.order}}
+              @sort={{@controller.sort}}
+            />
           </div>
         {{/if}}
 

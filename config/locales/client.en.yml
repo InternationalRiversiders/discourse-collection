@@ -168,9 +168,17 @@ en:
         confirm_revoke: "Revoke the invitation to @%{username}?"
       reading:
         heading: "Collected topics"
-        order_label: "By added time"
+        sort_label: "Sort topics"
+        # One label per sortable key (docs/04 §1); the reading feed's own set.
+        sort:
+          added_at: "Added"
+          topic_created_at: "Created"
+          topic_bumped_at: "Last reply"
         empty_body: "Topics added to this collection appear here."
+        # Row prefixes; the row prints the one matching the feed's sort key.
         added: "Added"
+        created: "Created"
+        last_reply: "Last reply"
         note_label: "Note"
         selected_replies: "Selected replies"
         view_all_replies: "View all selected replies"

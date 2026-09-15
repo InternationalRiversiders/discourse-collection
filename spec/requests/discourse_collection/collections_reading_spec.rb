@@ -152,11 +152,64 @@ RSpec.describe DiscourseCollection::CollectionsController do
       collect(collection, older, created_at: 2.hours.ago)
       collect(collection, newer, created_at: 1.hour.ago)
 
-      get "/collections/#{collection.id}/topics.json", params: { order: "asc" }
+      get "/collections/#{collection.id}/topics.json", params: { order: "asc", sort: "added_at" }
 
       expect(response.parsed_body["topics"].map { |row| row["topic"]["id"] }).to eq(
         [older.id, newer.id],
       )
+    end
+
+    # The fixtures are deliberately contradictory — the topic collected last is the one
+    # created first — so the expected order can only come from the topics column.
+    it "sorts by the topic's own creation time" do
+      collected_first = Fabricate(:topic, created_at: 1.day.ago)
+      collected_last = Fabricate(:topic, created_at: 5.days.ago)
+      collect(collection, collected_first, created_at: 2.hours.ago)
+      collect(collection, collected_last, created_at: 1.hour.ago)
+
+      get "/collections/#{collection.id}/topics.json", params: { sort: "topic_created_at" }
+
+      expect(response.parsed_body["topics"].map { |row| row["topic"]["id"] }).to eq(
+        [collected_first.id, collected_last.id],
+      )
+    end
+
+    it "sorts by the topic's latest activity" do
+      active_topic = Fabricate(:topic, bumped_at: 1.hour.ago)
+      idle_topic = Fabricate(:topic, bumped_at: 3.days.ago)
+      collect(collection, active_topic, created_at: 2.hours.ago)
+      collect(collection, idle_topic, created_at: 1.hour.ago)
+
+      get "/collections/#{collection.id}/topics.json", params: { sort: "topic_bumped_at" }
+
+      expect(response.parsed_body["topics"].map { |row| row["topic"]["id"] }).to eq(
+        [active_topic.id, idle_topic.id],
+      )
+    end
+
+    it "breaks ties on topic_id, in the direction the order asked for" do
+      first_topic = Fabricate(:topic, created_at: 2.days.ago)
+      second_topic = Fabricate(:topic, created_at: 2.days.ago)
+      lower, higher = [first_topic, second_topic].sort_by(&:id)
+      collect(collection, first_topic)
+      collect(collection, second_topic)
+
+      get "/collections/#{collection.id}/topics.json", params: { sort: "topic_created_at" }
+      expect(response.parsed_body["topics"].map { |row| row["topic"]["id"] }).to eq(
+        [higher.id, lower.id],
+      )
+
+      get "/collections/#{collection.id}/topics.json",
+          params: { sort: "topic_created_at", order: "asc" }
+      expect(response.parsed_body["topics"].map { |row| row["topic"]["id"] }).to eq(
+        [lower.id, higher.id],
+      )
+    end
+
+    it "rejects an unknown sort key" do
+      get "/collections/#{collection.id}/topics.json", params: { sort: "sideways" }
+
+      expect(response.status).to eq(400)
     end
 
     it "paginates with meta" do

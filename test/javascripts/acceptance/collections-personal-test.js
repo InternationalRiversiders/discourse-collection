@@ -59,9 +59,9 @@ acceptance("Collections mine and subscribed lists", function (needs) {
     assert.dom(".collection-tile").exists({ count: 1 });
     assert.dom(".collection-tile").containsText("Followed box");
     assert.dom(".collection-list__new-button").exists("every list tab carries the create button");
-    assert.dom(".collection-list__sort-button").exists({ count: 4 }, "same four sort keys as the other lists");
+    assert.dom(".collection-sort__button").exists({ count: 4 }, "same four sort keys as the other lists");
     assert
-      .dom(".collection-list__sort-button.-active")
+      .dom(".collection-sort__button.-active")
       .containsText("Recently updated", "defaults to last_topic_added_at desc");
   });
 });

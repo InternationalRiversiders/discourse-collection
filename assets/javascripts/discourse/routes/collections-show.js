@@ -1,6 +1,7 @@
 import { service } from "@ember/service";
 import DiscourseRoute from "discourse/routes/discourse";
 import { getCollection } from "../lib/collection-api";
+import { READING_SORT_DEFAULT } from "../lib/reading-sort";
 
 export default class CollectionsShowRoute extends DiscourseRoute {
   @service currentUser;
@@ -55,6 +56,7 @@ export default class CollectionsShowRoute extends DiscourseRoute {
       users: {},
       topicsMeta: { page: 0, page_size: 30, more: false, total: 0 },
       topicsOrder: "desc",
+      topicsSort: READING_SORT_DEFAULT,
       loadingTopics: false,
       loadingMoreTopics: false,
     });

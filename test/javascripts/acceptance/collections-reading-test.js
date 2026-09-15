@@ -1,4 +1,4 @@
-import { click, currentURL, settled, visit } from "@ember/test-helpers";
+import { click, currentURL, findAll, settled, visit } from "@ember/test-helpers";
 import { test } from "qunit";
 import { cloneJSON } from "discourse/lib/object";
 import userFixtures from "discourse/tests/fixtures/user-fixtures";
@@ -74,25 +74,50 @@ function topicRow(id, addedAt, { topic: topicOverrides, ...overrides } = {}) {
 }
 
 // Newest-added topic: card fields only, no selected replies key. Unlisted, so it
-// carries the conditional key and the marker core draws for one.
+// carries the conditional key and the marker core draws for one. Its topic is also the
+// most recently active, so the added-time and latest-activity keys both lead with it.
 const rowNew = topicRow(101, "2026-06-01T08:00:00.000Z", {
   note: "Editor's note",
-  topic: { unlisted: true },
+  topic: {
+    unlisted: true,
+    created_at: "2026-04-01T00:00:00.000Z",
+    bumped_at: "2026-04-30T00:00:00.000Z",
+  },
 });
 
 // Older topic: two inline selected replies plus an overflow beyond the window, so
 // the row carries has_more_selected_replies=true and a "view all" entry. Its author
-// (user_id 999) is not in USERS, standing in for a deleted account.
+// (user_id 999) is not in USERS, standing in for a deleted account. Its topic was
+// created last but is the least recently active, which is what tells the sort keys
+// apart: only the creation key leads with this row.
 const inlineReplies = [reply(4, 77), reply(5, 78)];
 const overflowReplies = [...inlineReplies, reply(6, 78), reply(7, 79)];
 const rowOld = topicRow(102, "2026-05-10T08:00:00.000Z", {
-  topic: { user_id: 999 },
+  topic: {
+    user_id: 999,
+    created_at: "2026-04-20T00:00:00.000Z",
+    bumped_at: "2026-04-25T00:00:00.000Z",
+  },
   selected_replies: inlineReplies,
   has_more_selected_replies: true,
 });
 
-function readingFeed(order) {
-  const rows = order === "asc" ? [rowOld, rowNew] : [rowNew, rowOld];
+const SORT_TIMES = {
+  added_at: (row) => row.added_at,
+  topic_created_at: (row) => row.topic.created_at,
+  topic_bumped_at: (row) => row.topic.bumped_at,
+};
+
+// The stub orders the two rows the way the endpoint would (ISO strings compare
+// chronologically), so an assertion on the rendered order proves the request carried
+// the key the reader picked.
+function readingFeed(order, sort) {
+  const time = SORT_TIMES[sort] ?? SORT_TIMES.added_at;
+  const rows = [rowNew, rowOld].sort((a, b) => {
+    const ascending = time(a).localeCompare(time(b));
+    return order === "asc" ? ascending : -ascending;
+  });
+
   return {
     topics: rows,
     users: USERS,
@@ -100,8 +125,17 @@ function readingFeed(order) {
   };
 }
 
+// The pills carry their label and no key of their own, so tests click the one whose
+// label matches rather than a position.
+function sortButton(labelKey) {
+  return findAll(".collection-sort__button").find(
+    (button) => button.textContent.trim() === i18n(labelKey)
+  );
+}
+
 acceptance("Collections reading feed", function (needs) {
   const orders = [];
+  const sorts = [];
   needs.user();
   needs.pretender((server, helper) => {
     // Card behind every author link (core fetches this when one is clicked).
@@ -121,8 +155,10 @@ acceptance("Collections reading feed", function (needs) {
     );
     server.get("/collections/12/topics.json", (request) => {
       const order = request.queryParams.order || "desc";
+      const sort = request.queryParams.sort || "added_at";
       orders.push(order);
-      return helper.response(readingFeed(order));
+      sorts.push(sort);
+      return helper.response(readingFeed(order, sort));
     });
     server.get("/collections/12/topics/102/selected_replies.json", () =>
       helper.response({
@@ -312,7 +348,7 @@ acceptance("Collections reading feed", function (needs) {
       .dom(".collection-topics__list .collection-topic:first-child")
       .containsText("Riverside topic 101");
 
-    await click(".collection-topics__order-toggle");
+    await click(".collection-sort__order-toggle");
     await settled();
 
     assert.strictEqual(orders.length, before + 1, "the toggle refetches page 0");
@@ -320,6 +356,60 @@ acceptance("Collections reading feed", function (needs) {
     assert
       .dom(".collection-topics__list .collection-topic:first-child")
       .containsText("Riverside topic 102");
+  });
+
+  test("orders the feed by the key the reader picks", async function (assert) {
+    await visit("/collections/12");
+    await settled();
+    const before = sorts.length;
+
+    assert.strictEqual(
+      sorts[sorts.length - 1],
+      "added_at",
+      "the feed opens on the collection time"
+    );
+
+    await click(sortButton("collections.reading.sort.topic_created_at"));
+    await settled();
+
+    assert.strictEqual(sorts.length, before + 1, "picking a key refetches page 0");
+    assert.strictEqual(sorts[sorts.length - 1], "topic_created_at", "with the key that was picked");
+    assert.strictEqual(orders[orders.length - 1], "desc", "and keeps the direction");
+    assert
+      .dom(".collection-topics__list .collection-topic:first-child")
+      .containsText("Riverside topic 102", "the topic created last now leads");
+    assert
+      .dom(".collection-topics__list .collection-topic:first-child .collection-topic__added")
+      .containsText(
+        i18n("collections.reading.created"),
+        "and the row names the time it is ordered by"
+      );
+
+    await click(sortButton("collections.reading.sort.topic_bumped_at"));
+    await settled();
+
+    assert.strictEqual(
+      sorts[sorts.length - 1],
+      "topic_bumped_at",
+      "the latest-activity key is the one requested"
+    );
+    assert
+      .dom(".collection-topics__list .collection-topic:first-child")
+      .containsText("Riverside topic 101", "the most recently active topic leads");
+    assert
+      .dom(
+        ".collection-topics__list .collection-topic:first-child .collection-topic__added .relative-date"
+      )
+      .hasAttribute(
+        "data-time",
+        String(Date.parse("2026-04-30T00:00:00.000Z")),
+        "the row prints the topic's latest activity, not the collection time"
+      );
+
+    const requests = sorts.length;
+    await click(sortButton("collections.reading.sort.topic_bumped_at"));
+    await settled();
+    assert.strictEqual(sorts.length, requests, "re-picking the active key changes nothing");
   });
 
   test("opens the full selected-replies list for a topic that has more", async function (assert) {

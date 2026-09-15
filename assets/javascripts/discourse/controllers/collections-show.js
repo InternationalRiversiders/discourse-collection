@@ -23,6 +23,7 @@ import {
 } from "../lib/collection-api";
 import { confirmAction } from "../lib/confirm";
 import { inviteRoleName, inviteStatusLabel } from "../lib/invite-labels";
+import { READING_SORT_DEFAULT, READING_SORT_FIELDS } from "../lib/reading-sort";
 
 // How much of the invitation record the collection page itself carries — the rest is
 // one click away in CollectionInviteRecordsModal.
@@ -90,6 +91,7 @@ export default class CollectionsShowController extends Controller {
   @tracked topics = [];
   @tracked topicsMeta = { page: 0, page_size: 30, more: false, total: 0 };
   @tracked topicsOrder = "desc";
+  @tracked topicsSort = READING_SORT_DEFAULT;
   // uid -> user, the feed's author source (the responses' top-level `users` map,
   // docs/04 §1), merged as pages and replaced rows arrive. Rows reference authors by
   // id only, so this is what the avatar and username are read from.
@@ -262,19 +264,24 @@ export default class CollectionsShowController extends Controller {
     return this.topicsMeta.more && !this.loadingTopics && !this.loadingMoreTopics;
   }
 
+  get topicsSortFields() {
+    return READING_SORT_FIELDS;
+  }
+
   // The feed's only author lookup: rows hold a user_id and nothing else, so every
   // avatar and username on the page is read through here.
   userFor(userId) {
     return userId == null ? null : this.users[userId];
   }
 
-  // First page of the reading feed (docs/04 §1, ordered by collection_topics.created_at).
-  // Called by the route after every :id reseed and by the asc/desc toggle.
+  // First page of the reading feed (docs/04 §1). Called by the route after every :id
+  // reseed and by both sort controls.
   async loadTopics() {
     const seq = ++this.#topicsRequestSeq;
     this.loadingTopics = true;
     try {
       const page = await listCollectionTopics(this.model.id, {
+        sort: this.topicsSort,
         order: this.topicsOrder,
         page: 0,
         page_size: this.topicsMeta.page_size,
@@ -296,6 +303,17 @@ export default class CollectionsShowController extends Controller {
     }
   }
 
+  // Both sort controls refetch page 0: loadTopics bumps the request sequence, so a
+  // load-more still in flight from the previous ordering is dropped rather than appended.
+  @action
+  async changeTopicsSort(field) {
+    if (this.topicsSort === field) {
+      return;
+    }
+    this.topicsSort = field;
+    await this.loadTopics();
+  }
+
   @action
   async toggleTopicsOrder() {
     this.topicsOrder = this.topicsOrder === "asc" ? "desc" : "asc";
@@ -311,6 +329,7 @@ export default class CollectionsShowController extends Controller {
     this.loadingMoreTopics = true;
     try {
       const page = await listCollectionTopics(this.model.id, {
+        sort: this.topicsSort,
         order: this.topicsOrder,
         page: this.topicsMeta.page + 1,
         page_size: this.topicsMeta.page_size,

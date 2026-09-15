@@ -147,9 +147,15 @@ zh_CN:
         confirm_revoke: "撤销对 @%{username} 的邀请？"
       reading:
         heading: "收录的话题"
-        order_label: "按收录时间"
+        sort_label: "排序话题"
+        sort:
+          added_at: "收录时间"
+          topic_created_at: "话题创建时间"
+          topic_bumped_at: "最后回复时间"
         empty_body: "收录到此淘专辑的话题会显示在这里。"
         added: "收录于"
+        created: "创建于"
+        last_reply: "最后回复于"
         note_label: "备注"
         selected_replies: "精选回复"
         view_all_replies: "查看全部精选回复"
