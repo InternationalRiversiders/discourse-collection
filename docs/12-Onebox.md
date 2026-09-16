@@ -54,7 +54,7 @@
       </div>
     </div>
     <div class="collection-onebox__times">
-      <span class="collection-onebox__activity">…</span> ×2   <!-- 创建 / 最近收录；无收录时第二枚为 .-none 占位 -->
+      <span class="collection-onebox__activity">…</span> ×2   <!-- 创建 / 最近收录；各含 .collection-onebox__date[data-time]，见 5；无收录时第二枚为 .-none 占位 -->
     </div>
   </div>
 </aside>
@@ -73,7 +73,13 @@
 
 ## 5. 时间
 
-两个时间在烘焙期以**绝对日期**（`I18n.l(…, format: :long)`）写进 `span.relative-date[data-time][data-format="medium-with-ago"]` 的正文；浏览器侧由 core 的 60s ticker 按 `data-time` 重算为相对时间，插件不需要自带 JS。故邮件、摘要与无 JS 读者看到的是绝对日期，而页面上的相对时间会被持续刷新。
+两个时间在烘焙期写进 `span.collection-onebox__date[data-time="{毫秒}"]` 的正文，正文是**绝对日期加 UTC 标记**（`I18n.l(…, format: :long)` 套 `discourse_collection.onebox.utc_time`）。服务端只有 UTC 一个时区，不写明会被邮件与摘要读者当成自己的本地时间。故邮件、摘要与无 JS 读者看到的是带标记的 UTC 时刻。
+
+浏览器侧由插件自带的 initializer（`assets/javascripts/discourse/initializers/collection-onebox-dates.js`）改写：按 `data-time` 算距离，**5 天内**给 core 的相对文案，**超过 5 天**给读者本地时区的完整时刻（`longDate`），并每 60s 重算一次（跨过 5 天边界时由这次重算接手）。
+
+不用 core 的 `.relative-date`，是因为它的 `medium` 格式过了 5 天固定落到短日期，没有哪个 format 能留住完整时刻；元素上留着 `relative-date` 类则会让 core 的 ticker 与插件各写各的。
+
+装饰在 cooked 元素**进入文档之前**执行（`d-decorated-html.gjs` 先 `applyHtmlDecorators` 再 `adoptNode`），所以烘焙文本不会在页面上闪出。`data-time` 是绝对毫秒，故重算只换显示时区，不改变时刻本身。
 
 卡片冻结在烘焙时刻：专辑改名或删除后，已烘焙帖子里的卡片不变（与核心话题 onebox 同）。
 
@@ -85,6 +91,6 @@
 
 - core 不把烘焙选项传给已注册的 handler（分类闸所需的 `category_id` 即在其中），故 prepend `Oneboxer.local_onebox` 与 `InlineOneboxer.lookup`，在调用期间把选项暂存于当前线程，handler 侧读回。
 
-- **存量帖需重新烘焙**才会长出卡片：这些 URL 此前已被 core 的兜底 `<a>` 顶掉 `a.onebox`，客户端补渲染不会发生。
+- **存量帖需重新烘焙**才会长出卡片：这些 URL 此前已被 core 的兜底 `<a>` 顶掉 `a.onebox`，客户端补渲染不会发生。卡片自身的改动同理（如 5 的时间元素从 `relative-date` 改名为 `collection-onebox__date`）：旧帖的 cooked 里仍是旧形态，装饰器选择器认不到，得重新烘焙才会走新逻辑。
 
 - 无 DB 改动。

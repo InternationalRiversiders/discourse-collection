@@ -119,17 +119,17 @@ module DiscourseCollection
         }
       end
 
-      # Core's ticker rewrites the text of every `.relative-date` from `data-time` and
-      # `data-format` (frontend/discourse/app/lib/formatter.js), so these values only have
-      # to be right at bake time — there is no plugin-side JavaScript. The baked text is
-      # an absolute date because it is what emails, digests and no-JS readers see, and a
-      # stale "3 hours ago" would be worse than an exact timestamp.
+      # The browser rewrites these from `data-time` on render (the plugin's own
+      # initializer, docs/12 §5), so they only have to be right at bake time.
       def time_ms(time)
         (time.to_f * 1000).to_i
       end
 
+      # This text is what emails, digests and readers without JavaScript see. It is baked
+      # in the server's zone — UTC — which is not the reader's, so it says so: without the
+      # marker a digest reader would take it for their own clock.
       def absolute_date(time)
-        I18n.l(time, format: :long)
+        I18n.t("discourse_collection.onebox.utc_time", time: I18n.l(time, format: :long))
       end
 
       def labels

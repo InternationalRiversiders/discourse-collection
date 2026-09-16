@@ -33,6 +33,7 @@ zh_CN:
       inline_title: "%{name} - 淘专辑"
       created_at: "创建于"
       last_topic_added_at: "更新于"
+      utc_time: "%{time}(UTC)"
       no_topics_yet: "暂无话题"
       no_owner: "无主"
       stats:

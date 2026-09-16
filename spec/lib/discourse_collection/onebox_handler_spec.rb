@@ -96,17 +96,24 @@ RSpec.describe DiscourseCollection::OneboxHandler do
       expect(card(collection)).to match(%r{<use href="#user-group"></use></svg>\s*2\s*</span>})
     end
 
-    it "hands core the timestamps it needs to keep the dates fresh" do
+    # The browser re-renders these from `data-time` (docs/12 §5), and core's own ticker
+    # only knows how to shorten them past five days — the plugin's initializer needs the
+    # elements to itself.
+    it "stamps the dates for the browser, and words the fallback in UTC" do
       collection = build_collection
       collection.update!(topic_count: 1, last_topic_added_at: Time.zone.now)
       collection.reload
 
       html = card(collection)
 
-      expect(html).to include(%(data-format="medium-with-ago"))
       expect(html).to include(%(data-time="#{(collection.created_at.to_f * 1000).to_i}"))
-      # What a mail digest, or a reader without JavaScript, sees.
-      expect(html).to include(I18n.l(collection.created_at, format: :long))
+      expect(html).to include(
+        %(<span class="collection-onebox__date" data-time="#{(collection.last_topic_added_at.to_f * 1000).to_i}">),
+      )
+      expect(html).not_to include("relative-date")
+      # What a mail digest, or a reader without JavaScript, sees. Baking happens in the
+      # server's zone, so the text carries the marker.
+      expect(html).to include("#{I18n.l(collection.created_at, format: :long)} UTC")
       expect(html).to include("Created")
       expect(html).to include("Updated")
     end
