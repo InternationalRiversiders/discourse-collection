@@ -20,7 +20,7 @@ en:
       subtitle: "Public topic collections across the site."
       mine_subtitle: "Collections you own or co-maintain."
       subscribed_subtitle: "Collections you subscribe to."
-      new_button: "New collection"
+      new_button: "New"
       sort_label: "Sort collections"
       tabs_label: "Collection lists"
       tabs:

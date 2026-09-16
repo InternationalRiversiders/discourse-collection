@@ -20,7 +20,7 @@ zh_CN:
       subtitle: "全站用户创建的公共话题收藏专辑。"
       mine_subtitle: "你创建或共同维护的淘专辑。"
       subscribed_subtitle: "你订阅的淘专辑。"
-      new_button: "新建淘专辑"
+      new_button: "新建"
       sort_label: "排序"
       tabs_label: "淘专辑列表视图"
       tabs:
