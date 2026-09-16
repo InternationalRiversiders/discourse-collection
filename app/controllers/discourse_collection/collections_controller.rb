@@ -396,9 +396,13 @@ module DiscourseCollection
     # when two rows share a value. The paging window is narrowed in SQL to the topics the
     # visitor may *list* (visible_topics_scope: category read-access + core's rule for unlisted
     # topics) *before* offset/limit, so rows the visitor may not list never occupy window
-    # slots and paging yields contiguous visible rows (no holes / empty mid pages).
-    # meta.total still counts the full collected set, so a restricted visitor may see
-    # fewer rows than the meta states and trailing pages can be sparse (docs/04 §1).
+    # slots and paging yields contiguous visible rows (no holes / empty mid pages). The window
+    # asks for one extra row: `more` is a fact about the narrowed subset the window walks, so
+    # deriving it from meta.total (the whole collected set) would keep answering true after
+    # that subset has run out (docs/04 §1). The probe row is sliced off before any row is
+    # built, so it reaches neither the serializer nor the top-level users map.
+    # meta.total still counts the full collected set, so a restricted visitor may see fewer
+    # rows than the meta states (docs/04 §1).
     # Rows on the page are then guardian-filtered row by row
     # (deleted or still-invisible dropped) as the final gate. It also inlines, for topics
     # flagged has_selected_reply=true, the collection's selected replies for that topic —
@@ -421,8 +425,10 @@ module DiscourseCollection
       memberships =
         apply_topic_order(scope.where(topic_id: visible_topics_scope.select(:id)), sort, order)
           .offset(page * page_size)
-          .limit(page_size)
+          .limit(page_size + 1)
           .to_a
+      more = memberships.size > page_size
+      memberships = memberships.first(page_size)
 
       topics_by_id = Topic.where(id: memberships.map(&:topic_id)).index_by(&:id)
       visible = memberships.filter_map do |membership|
@@ -440,7 +446,7 @@ module DiscourseCollection
       render json: {
         topics: rows,
         users: users_json(rows.flat_map { |row| row_user_ids(row) }),
-        meta: pagination_meta(page, page_size, total),
+        meta: { page:, page_size:, more:, total: },
       }
     end
 

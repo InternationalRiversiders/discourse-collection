@@ -224,6 +224,21 @@ RSpec.describe DiscourseCollection::CollectionsController do
       )
     end
 
+    it "reports more from the rows the visitor may list, not from meta.total" do
+      2.times.map { Fabricate(:topic) }.each { |topic| collect(collection, topic) }
+      unlisted = Fabricate(:topic)
+      unlisted.update_column(:visible, false)
+      collect(collection, unlisted)
+
+      get "/collections/#{collection.id}/topics.json", params: { page_size: 2 }
+
+      payload = response.parsed_body
+      expect(payload["topics"].length).to eq(2)
+      expect(payload["meta"]).to eq(
+        { "page" => 0, "page_size" => 2, "more" => false, "total" => 3 },
+      )
+    end
+
     it "omits collected topics whose topic is gone" do
       gone = Fabricate(:topic)
       collect(collection, gone)
