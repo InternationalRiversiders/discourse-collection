@@ -319,6 +319,105 @@ RSpec.describe DiscourseCollection::CollectionsController do
     end
   end
 
+  describe "#collected_topic" do
+    let(:collection) { build_collection(owner: other_user) }
+
+    it "is disabled when collection_enabled is off" do
+      SiteSetting.collection_enabled = false
+      topic = Fabricate(:topic)
+      collect(collection, topic)
+      sign_in(user)
+
+      get "/collections/#{collection.id}/topics/#{topic.id}.json"
+
+      expect(response.status).to eq(404)
+    end
+
+    context "when anonymous access is disabled" do
+      before { SiteSetting.collection_allow_anonymous = false }
+
+      it "rejects anonymous visitors with a 404" do
+        topic = Fabricate(:topic)
+        collect(collection, topic)
+
+        get "/collections/#{collection.id}/topics/#{topic.id}.json"
+
+        expect(response.status).to eq(404)
+      end
+    end
+
+    context "when anonymous access is enabled" do
+      before { SiteSetting.collection_allow_anonymous = true }
+
+      it "lets an anonymous visitor read the note" do
+        topic = Fabricate(:topic)
+        collect(collection, topic, note: "public note")
+
+        get "/collections/#{collection.id}/topics/#{topic.id}.json"
+
+        expect(response.status).to eq(200)
+        expect(response.parsed_body["note"]).to eq("public note")
+      end
+    end
+
+    context "as a logged-in reader" do
+      before { sign_in(stranger) }
+
+      it "returns the reading-page row of the collected topic" do
+        topic = Fabricate(:topic, user: user)
+        row = collect(collection, topic, note: "a note")
+
+        get "/collections/#{collection.id}/topics/#{topic.id}.json"
+
+        expect(response.status).to eq(200)
+        payload = response.parsed_body
+        expect(payload["note"]).to eq("a note")
+        expect(Time.zone.parse(payload["added_at"]).to_i).to eq(row.created_at.to_i)
+        expect(payload["topic"]["id"]).to eq(topic.id)
+        expect(payload["users"].keys).to eq([user.id.to_s])
+        expect(payload).not_to have_key("selected_replies")
+      end
+
+      it "inlines the selected replies of a flagged topic, like the reading page" do
+        topic, posts = reply_topic(collection, count: 2)
+        collect(collection, topic, has_selected_reply: true)
+        select_reply(collection, posts[1])
+
+        get "/collections/#{collection.id}/topics/#{topic.id}.json"
+
+        expect(response.status).to eq(200)
+        expect(response.parsed_body["selected_replies"].map { |reply| reply["post_id"] }).to eq(
+          [posts[1].id],
+        )
+      end
+
+      it "returns 404 when the topic is not collected in the collection" do
+        alien_topic = Fabricate(:topic)
+
+        get "/collections/#{collection.id}/topics/#{alien_topic.id}.json"
+
+        expect(response.status).to eq(404)
+      end
+
+      it "returns 404 for a topic the visitor cannot see" do
+        topic = Fabricate(:private_message_topic)
+        collect(collection, topic)
+
+        get "/collections/#{collection.id}/topics/#{topic.id}.json"
+
+        expect(response.status).to eq(404)
+      end
+
+      it "returns 404 for a collection that does not exist" do
+        topic = Fabricate(:topic)
+
+        get "/collections/999999/topics/#{topic.id}.json"
+
+        expect(response.status).to eq(404)
+      end
+    end
+  end
+
   describe "#rewrite_topic_note" do
     let(:collection) { build_collection(owner: other_user) }
 

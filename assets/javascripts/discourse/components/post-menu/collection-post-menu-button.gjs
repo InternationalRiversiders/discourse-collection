@@ -5,6 +5,7 @@ import { popupAjaxError } from "discourse/lib/ajax-error";
 import DButton from "discourse/ui-kit/d-button";
 import AddToCollectionModal from "../modal/add-to-collection-modal";
 import CollectionFormModal from "../modal/collection-form-modal";
+import CollectionNoteModal from "../modal/collection-note-modal";
 import RemoveTopicModal from "../modal/remove-topic-modal";
 import TopicSelectedRepliesModal from "../modal/topic-selected-replies-modal";
 import { removeTopicFromCollection } from "../../lib/collection-api";
@@ -107,6 +108,25 @@ export default class CollectionPostMenuButton extends Component {
     this.#showPicker(created);
   }
 
+  // The note editor is a modal of its own, so it takes the picker's place while it is up
+  // (the modal service holds one modal at a time) and the picker is put back once the
+  // editing is over, exactly as it is around the create form. The picker read the note
+  // this editor opens on before handing the chore over (docs/04 §8).
+  async #editNote(collection, note) {
+    await this.modal.show(CollectionNoteModal, {
+      model: {
+        collectionId: collection.id,
+        topicId: this.#topic.id,
+        collectionName: collection.name,
+        note,
+      },
+    });
+
+    if (!this.isDestroyed) {
+      this.#showPicker(null);
+    }
+  }
+
   // Un-collecting is the one picker action whose confirmation the picker cannot run
   // itself: that warning shows how many selected replies the removal would cascade away
   // and offers a look at them, so it is a modal of its own — and showing it takes the
@@ -188,6 +208,7 @@ export default class CollectionPostMenuButton extends Component {
       collectedIds: this.#topicCollections.map((collection) => collection.id),
       newCollection,
       onCreate: () => this.#openCreateForm(),
+      onEditNote: (collection, note) => this.#editNote(collection, note),
     };
 
     const model = this.#isFirstPost

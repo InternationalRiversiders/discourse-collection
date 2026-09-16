@@ -326,6 +326,31 @@
   }
 }
 
+// The topic picker's note editor. It replaced the picker, so it names the collection it
+// is editing — the row that opened it was the only place the name stood.
+.collection-note {
+  display: grid;
+  gap: 0.6rem;
+
+  &__collection {
+    margin: 0;
+    font-size: var(--font-up-1);
+    font-weight: 700;
+    word-break: break-word;
+  }
+
+  &__input {
+    width: 100%;
+    padding: 0.5em 0.75em;
+    border: 1px solid var(--primary-low);
+    border-radius: 4px;
+    color: var(--primary);
+    background: var(--secondary);
+    font: inherit;
+    resize: vertical;
+  }
+}
+
 .collection-invite {
   display: grid;
   gap: 0.75rem;
@@ -1062,6 +1087,17 @@
 
   &__action {
     flex: none;
+  }
+
+  &__edit-note {
+    flex: none;
+
+    // The entry is an icon and nothing else, and core leaves a right margin after an icon
+    // that is not the last thing in a button — with no label to follow it, that margin
+    // just holds the icon off centre in its own button.
+    > svg.d-icon-pencil {
+      margin-right: 0;
+    }
   }
 
   &__hint {

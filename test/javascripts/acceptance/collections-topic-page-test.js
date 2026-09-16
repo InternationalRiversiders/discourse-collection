@@ -46,6 +46,18 @@ function replyId() {
   ).id;
 }
 
+// One collected-topic row as the single-row read answers it (docs/04 §8). The editor reads
+// the note and nothing else, so the rest of the row is kept to the shape the endpoint
+// promises.
+function collectedRow(note) {
+  return {
+    added_at: "2026-06-01T01:00:00.000Z",
+    note,
+    topic: { id: 23456 },
+    selected_replies: [],
+  };
+}
+
 function topicPayload() {
   const topic = cloneJSON(topicFixtures["/t/280/1.json"]);
   topic.collections = COLLECTIONS;
@@ -76,7 +88,14 @@ async function clickRowAction(collectionId) {
 }
 
 acceptance("Collections topic page reverse lookup", function (needs) {
-  const requests = { posted: [], removed: [], patched: [], created: [] };
+  const requests = {
+    posted: [],
+    removed: [],
+    patched: [],
+    created: [],
+    notes: [],
+    read: [],
+  };
   let createdCollection = null;
 
   needs.hooks.beforeEach(() => {
@@ -84,6 +103,8 @@ acceptance("Collections topic page reverse lookup", function (needs) {
     requests.removed = [];
     requests.patched = [];
     requests.created = [];
+    requests.notes = [];
+    requests.read = [];
     createdCollection = null;
   });
 
@@ -193,8 +214,27 @@ acceptance("Collections topic page reverse lookup", function (needs) {
       );
     });
 
+    // The note editor asks for the row it is about to change before it opens on it
+    // (docs/04 §8); only 12 holds a note.
+    server.get("/collections/:id/topics/:topic_id.json", (request) => {
+      requests.read.push(request.params.id);
+
+      return helper.response(
+        collectedRow(request.params.id === "12" ? "Read this twice" : null)
+      );
+    });
+
     server.patch("/collections/:id/topics/:topic_id.json", (request) => {
       const body = new URLSearchParams(request.requestBody);
+
+      // Note edits ride the same endpoint as the featured edits (docs/04 §4) and are told
+      // apart by their own field.
+      if (body.has("note")) {
+        requests.notes.push({ id: request.params.id, note: body.get("note") });
+
+        return helper.response(collectedRow(body.get("note")));
+      }
+
       const mode = body.has("selected_replies[add][]") ? "add" : "remove";
 
       requests.patched.push({
@@ -385,6 +425,69 @@ acceptance("Collections topic page reverse lookup", function (needs) {
     assert
       .dom('[data-collection-id="12"] .add-to-collection__action')
       .hasText(i18n("collections.topic.collect"), "the row flips in place");
+  });
+
+  test("edits a collected topic's note from the picker", async function (assert) {
+    await visit(TOPIC_URL);
+    await settled();
+    await openManager(1);
+
+    assert
+      .dom('[data-collection-id="40"] .add-to-collection__edit-note')
+      .doesNotExist("a collection the topic is not in has no note to edit");
+    assert
+      .dom('[data-collection-id="12"] .add-to-collection__edit-note')
+      .exists("a held collection carries the entry");
+
+    await click('[data-collection-id="12"] .add-to-collection__edit-note');
+    await settled();
+
+    assert.deepEqual(requests.read, ["12"], "the note is read before it is edited");
+    assert
+      .dom(".collection-note__collection")
+      .hasText("Riverside reads", "the editor names what it edits");
+    assert
+      .dom(".collection-note__input")
+      .hasValue("Read this twice", "the box comes up holding the stored note");
+    assert
+      .dom(".add-to-collection")
+      .doesNotExist("the editor takes the picker's place");
+
+    await fillIn(".collection-note__input", "Worth a second pass");
+    await click(".collection-note__save");
+    await settled();
+
+    assert.deepEqual(
+      requests.notes,
+      [{ id: "12", note: "Worth a second pass" }],
+      "saves the note through the collected-topic endpoint"
+    );
+    assert.dom(".collection-note").doesNotExist("the editor closes on save");
+    assert.dom(".add-to-collection").exists("and the picker comes back");
+  });
+
+  test("opens the note editor empty on a reply's picker, and cancelling returns", async function (assert) {
+    await visit(TOPIC_URL);
+    await settled();
+    await openManager(2);
+
+    assert
+      .dom('[data-collection-id="30"] .add-to-collection__edit-note')
+      .exists("the entry belongs to the membership, so a reply's picker has it too");
+
+    await click('[data-collection-id="30"] .add-to-collection__edit-note');
+    await settled();
+
+    assert
+      .dom(".collection-note__input")
+      .hasValue("", "a collection holding no note opens an empty box");
+
+    await click(".collection-note__cancel");
+    await settled();
+
+    assert.deepEqual(requests.notes, [], "cancelling writes nothing");
+    assert.dom(".collection-note").doesNotExist("the editor closes");
+    assert.dom(".add-to-collection").exists("the picker comes back");
   });
 
   test("features and unfeatures a reply", async function (assert) {

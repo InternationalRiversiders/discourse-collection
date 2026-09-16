@@ -14,6 +14,7 @@ DiscourseCollection::Engine.routes.draw do
   get "/collections/:id/topics" => "collections#topics"
   get "/collections/:id/topics/:topic_id/selected_replies" => "collections#selected_replies"
   get "/collections/:id/topics/:topic_id/selected_replies/count" => "collections#selected_replies_count"
+  get "/collections/:id/topics/:topic_id" => "collections#collected_topic"
   patch "/collections/:id/topics/:topic_id" => "collections#update_collected_topic"
   put "/collections/:id/topics/:topic_id/note" => "collections#rewrite_topic_note"
   delete "/collections/:id/topics/:topic_id" => "collections#remove_topic"

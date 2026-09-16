@@ -5,7 +5,10 @@ module DiscourseCollection
     # Read access gate only for the public read actions. `mine` always requires a
     # logged-in user (it is scoped to "me"), so it checks that inside the action.
     before_action :ensure_read_access,
-                  only: %i[index show subscribers topics selected_replies selected_replies_count]
+                  only: %i[
+                    index show subscribers topics selected_replies selected_replies_count
+                    collected_topic
+                  ]
     # Write endpoints always require login; the owner/staff permission matrix is then
     # enforced per action by the service policies.
     before_action :ensure_write_access,
@@ -328,6 +331,17 @@ module DiscourseCollection
         end
         on_failed_step(:add_topic) { |step| render_error_response(step.error) }
       end
+    end
+
+    # docs/04 §8 GET /collections/:id/topics/:topic_id.json — one collected topic's row,
+    # asked for on its own rather than as part of the reading page. Read access, the same
+    # gate as the reading page (notes are public there): the row is the one the reading
+    # page inlines, so it is built by the same helper, which also raises 404 for a topic
+    # this collection does not hold or one the visitor cannot see.
+    def collected_topic
+      collection = find_collection(params[:id])
+
+      render_collected_topic_row(collection)
     end
 
     # docs/04 §4 PATCH /collections/:id/topics/:topic_id.json — partial edit of one
@@ -689,11 +703,12 @@ module DiscourseCollection
       row
     end
 
-    # Renders one collected-topic row after a write (docs/04 §4 / docs/06 §1 responses), re-reading
-    # the membership from the DB so the response reflects the committed state. The
-    # topic must still exist and be visible to the actor, else 404 (same rule as the
-    # reading page). The row carries its own `users` map next to the row fields, so a
-    # replaced row keeps resolving its avatars without a page reload.
+    # Renders one collected-topic row: the response of a write (docs/04 §4 / docs/06 §1) and the
+    # read of docs/04 §8. The membership is re-read from the DB rather than taken from a
+    # caller-held object, so a write's response reflects the committed state and the read
+    # needs no object of its own. The topic must still exist and be visible to the actor,
+    # else 404 (same rule as the reading page). The row carries its own `users` map next to
+    # the row fields, so a replaced row keeps resolving its avatars without a page reload.
     def render_collected_topic_row(collection)
       membership =
         CollectionTopic.find_by(collection_id: collection.id, topic_id: params[:topic_id])

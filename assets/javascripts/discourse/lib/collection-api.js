@@ -99,6 +99,13 @@ export function removeTopicFromCollection(collectionId, topicId) {
   });
 }
 
+// docs/04 §8 one collected topic's row, read on its own. The topic page's reverse lookup
+// carries only a collection's id and name (docs/07 §1), so a caller that needs the note —
+// the picker, before it hands one to the note editor — asks for the row here.
+export function getCollectedTopic(collectionId, topicId) {
+  return ajax(`/collections/${collectionId}/topics/${topicId}.json`);
+}
+
 // docs/04 §4 feature / un-feature one reply. Both verbs are incremental and idempotent and
 // resolve to the collected-topic row; a feature on a topic the collection does not
 // hold is a 404, and an OP or non-regular post is a 422.

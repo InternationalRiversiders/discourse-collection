@@ -18,6 +18,7 @@ import dNumber from "discourse/ui-kit/helpers/d-number";
 import {
   addTopicToCollection,
   countTopicSelectedReplies,
+  getCollectedTopic,
   listMyCollections,
   removeTopicFromCollection,
   selectReplyInCollection,
@@ -41,6 +42,12 @@ import emojiText, { titleText } from "../../lib/emoji-text";
  * own and the modal service holds one at a time, so the picker hands the chore to its
  * caller and is reopened by it once the form is done (see the entry point in
  * components/post-menu).
+ *
+ * A row the topic is already collected into carries a pencil, in both modes: the note
+ * belongs to that membership, not to the post in front of the reader. The note itself is
+ * not part of what the topic page injects (docs/07 §1), so this picker reads the row
+ * first (docs/04 §8) and passes the note to its caller, which runs the editor — again a
+ * modal of its own, again the picker's to reopen.
  */
 export default class AddToCollectionModal extends Component {
   @service router;
@@ -192,6 +199,30 @@ export default class AddToCollectionModal extends Component {
         this.args.model.onFeature?.(collection.id);
       },
     });
+  }
+
+  // The note is read before the editor opens, so the box comes up holding it — the same
+  // read it makes for the removal count, and the row locks the same way while it is in
+  // flight. Reaching the editor means leaving this picker: it is a modal of its own, so
+  // the caller runs it and reopens this one afterwards.
+  @action
+  async editNote(collection) {
+    this.pendingId = collection.id;
+    let note;
+    try {
+      const row = await getCollectedTopic(
+        collection.id,
+        this.args.model.topicId
+      );
+      note = row.note ?? "";
+    } catch (err) {
+      popupAjaxError(err);
+      return;
+    } finally {
+      this.pendingId = null;
+    }
+
+    this.args.model.onEditNote?.(collection, note);
   }
 
   @action
@@ -347,6 +378,23 @@ export default class AddToCollectionModal extends Component {
                       {{dIcon "layer-group"}}
                       {{dNumber collection.topic_count}}
                     </span>
+                    {{! The note hangs off the membership, so its entry sits on every
+                    collected row whatever the mode is about — the pencil edits what this
+                    collection says about the topic, not about the post in hand. Icon only:
+                    the row is a list of collections, and the button's own title carries
+                    the words. }}
+                    {{#if (includes this.collectedIds collection.id)}}
+                      <button
+                        type="button"
+                        class="btn btn-small add-to-collection__edit-note"
+                        disabled={{eq this.pendingId collection.id}}
+                        title={{i18n "collections.reading.edit_note"}}
+                        aria-label={{i18n "collections.reading.edit_note"}}
+                        {{on "click" (fn this.editNote collection)}}
+                      >
+                        {{dIcon "pencil"}}
+                      </button>
+                    {{/if}}
                     {{! The mode owns the row: the first post only ever collects or
                     un-collects its topic, a reply only ever features or unfeatures
                     that reply. Membership of the topic alone never turns a reply row
