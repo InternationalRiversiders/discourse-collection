@@ -41,7 +41,7 @@ acceptance("Collections invites inbox", function (needs) {
     requests.rejected = [];
   });
 
-  needs.user();
+  needs.user({ can_create_collection: true });
   needs.settings({
     collection_enabled: true,
     // Read by the create form the inbox's own button opens.

@@ -38,10 +38,11 @@ import emojiText, { titleText } from "../../lib/emoji-text";
  * there are any — that confirmation carries a "view" entry and is a modal of its own,
  * which would replace this picker.
  *
- * Its header also carries the way to create a collection. The form is a modal of its
- * own and the modal service holds one at a time, so the picker hands the chore to its
- * caller and is reopened by it once the form is done (see the entry point in
- * components/post-menu).
+ * Its header also carries the way to create a collection, for a viewer the server says
+ * may create one (docs/01 §3) — the endpoint would refuse anybody else. The form is a
+ * modal of its own and the modal service holds one at a time, so the picker hands the
+ * chore to its caller and is reopened by it once the form is done (see the entry point
+ * in components/post-menu).
  *
  * A row the topic is already collected into carries a pencil, in both modes: the note
  * belongs to that membership, not to the post in front of the reader. The note itself is
@@ -50,6 +51,7 @@ import emojiText, { titleText } from "../../lib/emoji-text";
  * modal of its own, again the picker's to reopen.
  */
 export default class AddToCollectionModal extends Component {
+  @service currentUser;
   @service router;
   @service siteSettings;
 
@@ -62,6 +64,10 @@ export default class AddToCollectionModal extends Component {
   @tracked selectedIds = [];
 
   #requestSeq = 0;
+
+  get canCreateCollection() {
+    return Boolean(this.currentUser?.can_create_collection);
+  }
 
   get canLoadMore() {
     return this.meta.more && !this.loading && !this.loadingMore;
@@ -332,13 +338,15 @@ export default class AddToCollectionModal extends Component {
       @title={{i18n this.titleKey}}
     >
       <:headerBelowTitle>
-        <button
-          type="button"
-          class="btn btn-default add-to-collection__new"
-          {{on "click" this.createCollection}}
-        >
-          {{i18n "collections.topic.new_collection"}}
-        </button>
+        {{#if this.canCreateCollection}}
+          <button
+            type="button"
+            class="btn btn-default add-to-collection__new"
+            {{on "click" this.createCollection}}
+          >
+            {{i18n "collections.topic.new_collection"}}
+          </button>
+        {{/if}}
       </:headerBelowTitle>
       <:body>
         <div class="add-to-collection" {{didInsert this.load}}>

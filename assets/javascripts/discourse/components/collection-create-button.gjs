@@ -7,14 +7,14 @@ import { i18n } from "discourse-i18n";
 import CollectionFormModal from "./modal/collection-form-modal";
 
 // The way into the create form, shared by every collection list so the entry sits in
-// the same place on all of them. Creating needs an account, so a guest is not shown
-// the button at all — and the endpoint would refuse one anyway.
+// the same place on all of them. Who may create is the server's answer (docs/01 §3), not
+// a rule restated here: a guest carries no such flag, and the endpoint refuses the rest.
 export default class CollectionCreateButton extends Component {
   @service currentUser;
   @service modal;
 
   get canCreate() {
-    return Boolean(this.currentUser);
+    return Boolean(this.currentUser?.can_create_collection);
   }
 
   @action

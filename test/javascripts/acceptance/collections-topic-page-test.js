@@ -108,7 +108,7 @@ acceptance("Collections topic page reverse lookup", function (needs) {
     createdCollection = null;
   });
 
-  needs.user();
+  needs.user({ can_create_collection: true });
   needs.settings({
     collection_enabled: true,
     // The entry leans on a populated collapsed region, which is what core's
@@ -661,6 +661,42 @@ acceptance("Collections topic page — entry gates", function (needs) {
     assert
       .dom(`#post_1 ${MENU_BUTTON}`)
       .doesNotExist("and not after expanding either");
+  });
+});
+
+acceptance("Collections topic page — create entry gate", function (needs) {
+  // The picker's way into the create form follows the same server answer (docs/01 §3).
+  // The picker itself stays: it lists the collections this viewer already maintains,
+  // which is not what the create gate is about.
+  needs.user({ can_create_collection: false });
+  needs.settings({
+    collection_enabled: true,
+    post_menu_hidden_items: "flag|bookmark|edit|delete|admin",
+  });
+
+  needs.pretender((server, helper) => {
+    const payload = () => helper.response(topicPayload());
+
+    server.get("/t/280.json", payload);
+    server.get("/t/280/:post_number.json", payload);
+
+    server.get("/collections/mine.json", () =>
+      helper.response({
+        collections: [collectionShape(12, "Riverside reads")],
+        meta: { page: 0, page_size: 30, more: false, total: 1 },
+      })
+    );
+  });
+
+  test("leaves the create form out of the picker", async function (assert) {
+    await visit(TOPIC_URL);
+    await settled();
+    await openManager(1);
+
+    assert.dom(".add-to-collection__row").exists("the picker still opens");
+    assert
+      .dom(".add-to-collection__new")
+      .doesNotExist("but carries no way to create a collection");
   });
 });
 

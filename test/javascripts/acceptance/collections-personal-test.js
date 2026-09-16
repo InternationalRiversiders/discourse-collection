@@ -29,7 +29,7 @@ function listResponse(collections) {
 }
 
 acceptance("Collections mine and subscribed lists", function (needs) {
-  needs.user();
+  needs.user({ can_create_collection: true });
   needs.pretender((server, helper) => {
     server.get("/collections/mine.json", () =>
       helper.response(listResponse([collectionTile(1, { name: "Owned gems :smile:" })]))

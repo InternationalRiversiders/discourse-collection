@@ -37,7 +37,8 @@ const requests = [];
 let observations;
 
 acceptance("Collections profile activity tab", function (needs) {
-  needs.user();
+  // The viewer could create here; the tab is simply not one of the create entries.
+  needs.user({ can_create_collection: true });
   needs.hooks.beforeEach(() => {
     requests.length = 0;
     // Infinite scroll only fires through the sentinel, and the test container has no

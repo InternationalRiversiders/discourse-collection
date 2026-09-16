@@ -33,7 +33,7 @@ const CREATED = {
 };
 
 acceptance("Collections create modal", function (needs) {
-  needs.user();
+  needs.user({ can_create_collection: true });
   needs.settings({
     collection_name_min_length: 3,
     collection_name_max_length: 20,
@@ -92,5 +92,27 @@ acceptance("Collections create modal", function (needs) {
     assert.strictEqual(currentURL(), "/collections/9");
     assert.dom(".collection-detail__name").hasText("Riverside Reads");
     assert.dom("#collection-form-name").doesNotExist("the modal is gone after success");
+  });
+});
+
+acceptance("Collections create entry gate", function (needs) {
+  // Who may create is the server's answer (docs/01 §3), so a list must not offer an
+  // entry the create endpoint would refuse.
+  needs.user({ can_create_collection: false });
+  needs.settings({ collection_enabled: true });
+
+  needs.pretender((server, helper) => {
+    server.get("/collections.json", () => helper.response(listResponse([])));
+    server.get("/collections/mine.json", () => helper.response(listResponse([])));
+  });
+
+  test("leaves the create button off the lists", async function (assert) {
+    await visit("/collections");
+    assert
+      .dom(".collection-list__new-button")
+      .doesNotExist("the public list offers no way in");
+
+    await visit("/collections/mine");
+    assert.dom(".collection-list__new-button").doesNotExist("nor does the mine list");
   });
 });

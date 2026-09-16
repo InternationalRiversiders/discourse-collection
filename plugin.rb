@@ -2,7 +2,7 @@
 
 # name: discourse-collection
 # about: Public collections: signed-in users create topic collections, co-maintain them, feature selected replies, and subscribe to updates.
-# version: 1.3.2
+# version: 1.3.3
 # authors: 0x444858
 
 enabled_site_setting :collection_enabled
@@ -92,6 +92,17 @@ after_initialize do
         preloaded ? preloaded[object.id] || [] : []
       end
   end
+end
+
+# Whether the viewer may create a collection at all (docs/01 §3), so the frontend can
+# leave out an entry the create endpoint would refuse. The rule stays in CollectionPolicy;
+# this only publishes its answer for the acting user.
+after_initialize do
+  add_to_serializer(
+    :current_user,
+    :can_create_collection,
+    respect_plugin_enabled: true,
+  ) { DiscourseCollection::CollectionPolicy.allowed_to_create_collections?(object) }
 end
 
 # Collection links in post bodies (docs/12): a bare /collections/:id URL on a line of its
