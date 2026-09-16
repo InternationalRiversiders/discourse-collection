@@ -9,6 +9,7 @@ DiscourseCollection::Engine.routes.draw do
   get "/collections/:id" => "collections#show"
   post "/collections" => "collections#create"
   put "/collections/:id" => "collections#update"
+  put "/collections/:id/read_notifications" => "collections#read_notifications"
   post "/collections/:id/topics" => "collections#add_topic"
   get "/collections/:id/topics" => "collections#topics"
   get "/collections/:id/topics/:topic_id/selected_replies" => "collections#selected_replies"

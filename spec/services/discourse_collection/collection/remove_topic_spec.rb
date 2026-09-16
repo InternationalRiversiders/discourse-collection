@@ -12,14 +12,6 @@ RSpec.describe DiscourseCollection::Collection::RemoveTopic do
     end
   end
 
-  def register_batch(topic: self.topic)
-    DiscourseCollection::TopicAddedNotificationBatch.register!(
-      collection:,
-      actor_user_id: owner.id,
-      topic:,
-    )
-  end
-
   describe described_class::Contract, type: :model do
     subject(:contract) { described_class.new(**params) }
 
@@ -84,16 +76,6 @@ RSpec.describe DiscourseCollection::Collection::RemoveTopic do
       let(:params) { { id: collection.id, topic_id: Fabricate(:topic).id } }
 
       it { is_expected.to fail_a_step(:ensure_topic_is_included) }
-
-      it "keeps the pending 21075 run — the failed remove changed nothing" do
-        stamp = register_batch
-
-        result
-
-        expect(
-          DiscourseCollection::TopicAddedNotificationBatch.current?(collection.id, stamp),
-        ).to eq(true)
-      end
     end
 
     context "when a co-maintainer removes a topic" do
@@ -132,30 +114,24 @@ RSpec.describe DiscourseCollection::Collection::RemoveTopic do
         expect(collection.reload.updated_at).to be_within(1.second).of(Time.zone.now)
       end
 
-      # A remove touches no notification state. It tells a pending run to stand down
-      # only by changing which membership row is the newest — so un-collecting the topic
-      # that opened the run silences it, while un-collecting anything older does not
-      # (docs/09 §2).
-      it "stands down the pending 21075 run opened by the removed topic" do
-        stamp = register_batch
+      # A remove touches no notification state: each 21075 run is judged against the
+      # collect that opened it, so un-collecting neither silences nor clears it (docs/09 §2).
+      it "leaves the collection's notifications alone — not deleted, not refreshed" do
+        notification =
+          Notification.create!(
+            user_id: owner.id,
+            notification_type: Notification.types[:collection_topic_added],
+            data: { display_username: collection.name, collection_id: collection.id }.to_json,
+            read: true,
+            created_at: 3.days.ago,
+            updated_at: 3.days.ago,
+            skip_send_email: true,
+          )
 
         result
 
-        expect(
-          DiscourseCollection::TopicAddedNotificationBatch.current?(collection.id, stamp),
-        ).to eq(false)
-      end
-
-      it "keeps the run alive when a different, older topic is the one removed" do
-        older_topic = Fabricate(:topic)
-        Fabricate(:collection_topic, collection:, topic: older_topic, created_at: 2.days.ago)
-        stamp = register_batch
-
-        described_class.call(params: { id: collection.id, topic_id: older_topic.id }, guardian:)
-
-        expect(
-          DiscourseCollection::TopicAddedNotificationBatch.current?(collection.id, stamp),
-        ).to eq(true)
+        expect(notification.reload.read).to eq(true)
+        expect(notification.created_at).to be_within(1.second).of(3.days.ago)
       end
 
       it "recomputes last_topic_added_at to the newest remaining collect, NULL when empty" do

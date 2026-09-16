@@ -57,8 +57,15 @@ acceptance("Collections list", function (needs) {
         })
       )
     );
-    // The detail page loads the reading feed (docs/04 §1) for any opened collection.
+    // The detail page loads the reading feed (docs/04 §1) for any opened collection, and
+    // the invitation record (docs/05 §2.3) for a viewer who may read it.
     server.get("/collections/:id/topics.json", () => helper.response(emptyTopics()));
+    server.get("/collections/:id/invites.json", () =>
+      helper.response({
+        invites: [],
+        meta: { page: 0, page_size: 30, more: false, total: 0 },
+      })
+    );
   });
 
   test("clicking a tile opens the collection detail page", async function (assert) {
@@ -110,8 +117,18 @@ acceptance("Collections list", function (needs) {
     await visit("/collections");
 
     assert.dom(".collection-tile").exists({ count: 2 });
-    assert.dom(".collection-tile").containsText("Riverside gems");
-    assert.dom(".collection-tile").containsText("Unclaimed box");
+    // A selector that catches both tiles is answered by the first of them whichever
+    // name is asked for, so each tile is read by its own position.
+    assert
+      .dom(
+        ".collection-list__grid .collection-tile:nth-child(1) .collection-tile__name"
+      )
+      .hasText("Riverside gems");
+    assert
+      .dom(
+        ".collection-list__grid .collection-tile:nth-child(2) .collection-tile__name"
+      )
+      .hasText("Unclaimed box");
     assert.dom(".collection-list__total").containsText("2");
     // The note belongs to the pages that list a single user's collections, where a role
     // badge could be read as that user's.
@@ -130,7 +147,11 @@ acceptance("Collections list", function (needs) {
       .exists();
     assert
       .dom(".collection-tile:first-child .collection-tile__activity")
-      .exists({ count: 2 })
+      .exists({ count: 2 });
+    // Both stamps are asked of their shared footer: split over two spans, they would
+    // otherwise be read one at a time, and only the first would ever answer.
+    assert
+      .dom(".collection-tile:first-child .collection-tile__footer")
       .includesText(i18n("collections.tile.created_at"))
       .includesText(i18n("collections.tile.last_topic_added_at"));
   });
@@ -138,7 +159,9 @@ acceptance("Collections list", function (needs) {
   test("marks an ownerless collection as unclaimed", async function (assert) {
     await visit("/collections");
 
-    assert.dom(".collection-tile").containsText(i18n("collections.no_owner"));
+    assert
+      .dom(".collection-tile:nth-child(2) .collection-tile__owner-name")
+      .hasText(i18n("collections.no_owner"));
   });
 
   test("adds a community sidebar link", async function (assert) {

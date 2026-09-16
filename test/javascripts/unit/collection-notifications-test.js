@@ -9,7 +9,10 @@ import {
 import Notification from "discourse/models/notification";
 import { createRenderDirector } from "discourse/tests/helpers/notification-types-helper";
 import CollectionNotificationsInitializer from "discourse/plugins/discourse-collection/discourse/initializers/collection-notifications";
-import { registerCollectionNotificationRenderers } from "discourse/plugins/discourse-collection/discourse/lib/collection-notifications";
+import {
+  registerCollectionNotificationRenderers,
+  shouldMarkCollectionNotificationsRead,
+} from "discourse/plugins/discourse-collection/discourse/lib/collection-notifications";
 import { i18n } from "discourse-i18n";
 
 // One notification as the jobs write them (docs/09 §1): a locator-only `data`
@@ -163,16 +166,15 @@ module("Unit | Collection notifications", function (hooks) {
   // The behaviour above says nothing about whether the plugin actually wires the
   // renderers up on boot, which is what keeps them from falling back to the base
   // class in production.
+  // The initializer is invoked with the owner, the way the app invokes it: core wraps
+  // every plugin initializer so the Discourse-style container argument arrives as
+  // `app.__container__` (app.js#resolveDiscourseInitializer). A stand-in container fails
+  // there, and the owner is what core's own plugin tests hand their initializers.
   test("the initializer registers the four renderers", function (assert) {
-    const container = {
-      lookup: (name) => {
-        assert.strictEqual(name, "service:site-settings");
-        return { collection_enabled: true };
-      },
-    };
-
     resetNotificationTypeRenderers();
-    CollectionNotificationsInitializer.initialize(container);
+    this.siteSettings.collection_enabled = true;
+
+    CollectionNotificationsInitializer.initialize(this.owner);
 
     notificationTypes().forEach((name) => {
       assert.notStrictEqual(
@@ -185,9 +187,9 @@ module("Unit | Collection notifications", function (hooks) {
 
   test("the initializer registers nothing when the plugin is off", function (assert) {
     resetNotificationTypeRenderers();
-    CollectionNotificationsInitializer.initialize({
-      lookup: () => ({ collection_enabled: false }),
-    });
+    this.siteSettings.collection_enabled = false;
+
+    CollectionNotificationsInitializer.initialize(this.owner);
 
     notificationTypes().forEach((name) => {
       assert.strictEqual(
@@ -196,6 +198,70 @@ module("Unit | Collection notifications", function (hooks) {
         `${name} falls back to the base renderer`
       );
     });
+  });
+});
+
+// The three types whose link is the collection page; the invitation type is left out
+// because it leads to the inbox, and the gate must stay shut for it.
+const GATED_TYPES = [
+  "collection_topic_added",
+  "collection_invitation_accepted",
+  "collection_invitation_declined",
+];
+
+// The gate the collection page puts in front of its read pass
+// (routes/collections-show.js). Both halves of it read payloads core builds, so the
+// shapes below are the ones the wire actually carries: a per-type count map keyed by the
+// numeric type id, and the site's name → id lookup.
+module("Unit | Collection notification read gate", function () {
+  const TYPES = {
+    collection_topic_added: 21075,
+    collection_invitation: 21076,
+    collection_invitation_accepted: 21077,
+    collection_invitation_declined: 21078,
+  };
+
+  const site = { notification_types: TYPES };
+
+  function viewer(unreadCounts) {
+    return { grouped_unread_notifications: unreadCounts };
+  }
+
+  test("opens when a type that leads to the collection page is unread", function (assert) {
+    GATED_TYPES.forEach((name) => {
+      const user = viewer({ [TYPES[name]]: 1 });
+
+      assert.true(shouldMarkCollectionNotificationsRead(user, site), name);
+    });
+  });
+
+  test("stays shut when every count is zero", function (assert) {
+    const user = viewer({ 21075: 0, 21076: 0, 21077: 0, 21078: 0 });
+
+    assert.false(shouldMarkCollectionNotificationsRead(user, site));
+  });
+
+  // 21076 leads to the invitation inbox, and answering or revoking the invitation deletes
+  // the row — opening a collection settles nothing about it.
+  test("stays shut for the invitation type", function (assert) {
+    const user = viewer({ [TYPES.collection_invitation]: 4 });
+
+    assert.false(shouldMarkCollectionNotificationsRead(user, site));
+  });
+
+  // Fail-closed: a client that cannot read its own payload must not send the request.
+  test("stays shut without the counts", function (assert) {
+    assert.false(shouldMarkCollectionNotificationsRead({}, site));
+  });
+
+  test("stays shut without the site's type lookup", function (assert) {
+    const user = viewer({ 21075: 1 });
+
+    assert.false(shouldMarkCollectionNotificationsRead(user, {}));
+  });
+
+  test("stays shut for a guest", function (assert) {
+    assert.false(shouldMarkCollectionNotificationsRead(null, site));
   });
 });
 

@@ -1,12 +1,14 @@
 import { service } from "@ember/service";
 import DiscourseRoute from "discourse/routes/discourse";
 import { i18n } from "discourse-i18n";
-import { getCollection } from "../lib/collection-api";
+import { getCollection, markCollectionNotificationsRead } from "../lib/collection-api";
+import { shouldMarkCollectionNotificationsRead } from "../lib/collection-notifications";
 import { READING_SORT_DEFAULT } from "../lib/reading-sort";
 
 export default class CollectionsShowRoute extends DiscourseRoute {
   @service currentUser;
   @service router;
+  @service site;
   @service siteSettings;
 
   beforeModel() {
@@ -63,6 +65,12 @@ export default class CollectionsShowRoute extends DiscourseRoute {
     });
     controller.loadTopics();
     controller.loadInvites();
+
+    // Reaching the collection is what makes its notifications read (docs/09 §1).
+    // Fire-and-forget: a refused pass leaves them unread, which is where they started.
+    if (shouldMarkCollectionNotificationsRead(this.currentUser, this.site)) {
+      void markCollectionNotificationsRead(model.id).catch(() => {});
+    }
   }
 
   // The name comes from the controller rather than the model: an edit (docs/05 §1)

@@ -43,7 +43,10 @@ module DiscourseCollection
         step :join_as_maintainer_on_accept
       end
       step :mark_accepted
+      step :purge_invite_notification
     end
+    # Post-transaction: the invitee's notification is gone only once the accept commits.
+    step :publish_notifications_state
     # Post-transaction: only after the invite commits as accepted. Every successful
     # run (incl. the idempotent "already a co-maintainer" type=0 path) flips the row
     # from pending to accepted, so a result notification is always due — on a type=1
@@ -116,6 +119,33 @@ module DiscourseCollection
 
     def mark_accepted(invite:)
       invite.update!(accept: true)
+    end
+
+    # 21076 (docs/09 §1) is a question waiting to be answered, and this one has been — the
+    # notification would still be pointing at a request the invitee just granted. Located
+    # by invite_id rather than by collection_id: the invitee may be holding another pending
+    # invitation for the same collection, and that one's notification is still owed. Scoped
+    # on the invitee — the only user it was ever written for, which keeps this off a scan of
+    # the whole core notifications table. The id is kept in the context for the
+    # post-transaction push.
+    def purge_invite_notification(invite:)
+      context[:notified_user_ids] = [invite.invitee_user_id].compact
+
+      ::Notification
+        .where(
+          user_id: invite.invitee_user_id,
+          notification_type: ::Notification.types[:collection_invitation],
+        )
+        .where("data::jsonb ->> 'invite_id' = ?", invite.id.to_s)
+        .delete_all
+    end
+
+    # delete_all bypasses the AR callbacks, and the live notification state is published
+    # from one of them (Notification#refresh_notification_count, after_commit) — so the
+    # users whose rows are gone are pushed here instead. Loaded fresh: the counts
+    # publish_notifications_state reads are memoized per instance.
+    def publish_notifications_state(notified_user_ids:)
+      ::User.where(id: notified_user_ids).find_each(&:publish_notifications_state)
     end
 
     # 21077 collection_invitation_accepted (docs/09 §1): the inviter learns their

@@ -59,4 +59,29 @@ RSpec.describe Jobs::DiscourseCollection::NotifyInvitationResult do
       expect { run_job }.not_to change { Notification.count }
     end
   end
+
+  # 21077 / 21078 do not mail either: the row is written with skip_send_email rather than
+  # leaning on core having no EmailUser method named after the type.
+  it "processes no email" do
+    invite.update!(accept: true)
+    NotificationEmailer.expects(:process_notification).never
+
+    run_job
+  end
+
+  context "when the inviter is in do not disturb mode" do
+    before do
+      invite.update!(accept: true)
+      Fabricate(
+        :do_not_disturb_timing,
+        user: inviter,
+        starts_at: 1.hour.ago,
+        ends_at: 1.hour.from_now,
+      )
+    end
+
+    it "shelves nothing" do
+      expect { run_job }.not_to change { ShelvedNotification.count }
+    end
+  end
 end

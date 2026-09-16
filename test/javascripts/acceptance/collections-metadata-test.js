@@ -7,6 +7,11 @@ import { i18n } from "discourse-i18n";
 const VIEWER = { id: 19, username: "eviltrout", name: "Robin Ward" };
 const OTHER_OWNER = { id: 20, username: "ana", name: "Ana" };
 
+// That fixture user is admin, moderator and staff, so `needs.user()` alone hands a module
+// the staff management role as well. The modules below mean a viewer who holds no such
+// role, and say so; the ones about a staff reader keep the flags and say which.
+const NON_STAFF = { admin: false, moderator: false, staff: false };
+
 const DIALOG = ".dialog-body";
 const DIALOG_CONFIRM = ".dialog-footer .btn-danger";
 
@@ -171,7 +176,7 @@ acceptance("Collections metadata — owner", function (needs) {
 });
 
 acceptance("Collections metadata — plain reader", function (needs) {
-  needs.user();
+  needs.user(NON_STAFF);
   needs.settings({ collection_enabled: true });
   needs.pretender((server, helper) => {
     // The detail page also loads the invitation record (docs/05 §2.3) for a viewer
@@ -323,7 +328,9 @@ acceptance("Collections metadata — unclaimed", function (needs) {
 });
 
 acceptance("Collections metadata — moderator", function (needs) {
-  needs.user({ moderator: true });
+  // Only the moderator flag: keeping the fixture's admin flag would grant the edit on its
+  // own and leave the site setting with nothing to decide.
+  needs.user({ admin: false, moderator: true });
   needs.settings({
     collection_enabled: true,
     collection_moderators_can_manage_collections: false,
@@ -353,7 +360,7 @@ acceptance("Collections metadata — moderator", function (needs) {
 });
 
 acceptance("Collections metadata — moderator with the setting on", function (needs) {
-  needs.user({ moderator: true });
+  needs.user({ admin: false, moderator: true });
   needs.settings({
     collection_enabled: true,
     collection_moderators_can_manage_collections: true,

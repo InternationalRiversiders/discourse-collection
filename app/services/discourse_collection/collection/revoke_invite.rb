@@ -31,8 +31,11 @@ module DiscourseCollection
     transaction do
       step :ensure_pending
       step :capture_revoke_audit
+      step :purge_invite_notification
       step :destroy_invite
     end
+    # Post-transaction: the invitee's notification is gone only once the revoke commits.
+    step :publish_notifications_state
     # Post-transaction (docs/10 §1): only a revocation of someone else's invitation
     # is a management action worth a log row. It reads the snapshot taken inside the
     # transaction, because the row it describes is gone by now.
@@ -79,6 +82,34 @@ module DiscourseCollection
 
     def destroy_invite(invite:)
       invite.destroy!
+    end
+
+    # 21076 (docs/09 §1) is a question waiting to be answered, and a revoked invitation is
+    # no longer one — the notification would still be pointing at a request that cannot be
+    # granted. Located by invite_id rather than by collection_id: the invitee may be
+    # holding another pending invitation for the same collection, and that one's
+    # notification is still owed. Scoped on the invitee — the only user it was ever written
+    # for, which keeps this off a scan of the whole core notifications table. The id is kept
+    # in the context because the row that locates the notification is gone by the time the
+    # push runs.
+    def purge_invite_notification(invite:)
+      context[:notified_user_ids] = [invite.invitee_user_id].compact
+
+      ::Notification
+        .where(
+          user_id: invite.invitee_user_id,
+          notification_type: ::Notification.types[:collection_invitation],
+        )
+        .where("data::jsonb ->> 'invite_id' = ?", invite.id.to_s)
+        .delete_all
+    end
+
+    # delete_all bypasses the AR callbacks, and the live notification state is published
+    # from one of them (Notification#refresh_notification_count, after_commit) — so the
+    # users whose rows are gone are pushed here instead. Loaded fresh: the counts
+    # publish_notifications_state reads are memoized per instance.
+    def publish_notifications_state(notified_user_ids:)
+      ::User.where(id: notified_user_ids).find_each(&:publish_notifications_state)
     end
 
     # The staff-action-log row for a proxy revocation: acting user = the revoker,

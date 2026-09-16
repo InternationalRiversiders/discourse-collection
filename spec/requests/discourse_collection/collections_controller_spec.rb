@@ -1372,6 +1372,59 @@ RSpec.describe DiscourseCollection::CollectionsController do
     end
   end
 
+  describe "#read_notifications" do
+    let(:collection) { build_collection(name: "Shared", owner: other_user) }
+
+    # A notification row the way this plugin writes it (docs/09 §1): the type plus the locator
+    # keys, no topic_id.
+    def create_notification(recipient, type)
+      Notification.create!(
+        user_id: recipient.id,
+        notification_type: Notification.types[type],
+        data: {
+          display_username: collection.name,
+          collection_id: collection.id,
+        }.to_json,
+        skip_send_email: true,
+      )
+    end
+
+    it "requires a logged-in user" do
+      put "/collections/#{collection.id}/read_notifications.json"
+
+      expect(response.status).to eq(403)
+    end
+
+    it "marks the caller's unread notifications about the collection as read" do
+      notification = create_notification(user, :collection_topic_added)
+      other_notification = create_notification(other_user, :collection_topic_added)
+      sign_in(user)
+
+      put "/collections/#{collection.id}/read_notifications.json"
+
+      expect(response.status).to eq(200)
+      expect(notification.reload.read).to eq(true)
+      expect(other_notification.reload.read).to eq(false)
+    end
+
+    it "answers 200 without writing when the caller has nothing unread" do
+      sign_in(user)
+
+      expect { put "/collections/#{collection.id}/read_notifications.json" }.not_to change {
+        Notification.count
+      }
+      expect(response.status).to eq(200)
+    end
+
+    it "returns a 404 for a missing collection" do
+      sign_in(user)
+
+      put "/collections/999999/read_notifications.json"
+
+      expect(response.status).to eq(404)
+    end
+  end
+
   describe "#subscribed" do
     it "requires a logged-in user" do
       get "/collections/subscribed.json"

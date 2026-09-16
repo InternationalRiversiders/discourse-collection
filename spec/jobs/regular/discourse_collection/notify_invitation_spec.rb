@@ -32,6 +32,9 @@ RSpec.describe Jobs::DiscourseCollection::NotifyInvitation do
       "action_type" => TYPE_MAINTAINER,
       "collection_id" => collection.id,
       "collection_name" => collection.name,
+      # The locator the invitation flow deletes this row by once the invitation is answered
+      # or revoked — one person can hold two pending invitations for one collection.
+      "invite_id" => invite.id,
     )
   end
 
@@ -72,6 +75,29 @@ RSpec.describe Jobs::DiscourseCollection::NotifyInvitation do
 
     it "creates nothing" do
       expect { run_job }.not_to change { Notification.count }
+    end
+  end
+
+  # None of this plugin's four types mails: the row is written with skip_send_email rather
+  # than leaning on core having no EmailUser method named after the type.
+  it "processes no email" do
+    NotificationEmailer.expects(:process_notification).never
+
+    run_job
+  end
+
+  context "when the invitee is in do not disturb mode" do
+    before do
+      Fabricate(
+        :do_not_disturb_timing,
+        user: invitee,
+        starts_at: 1.hour.ago,
+        ends_at: 1.hour.from_now,
+      )
+    end
+
+    it "shelves nothing" do
+      expect { run_job }.not_to change { ShelvedNotification.count }
     end
   end
 end

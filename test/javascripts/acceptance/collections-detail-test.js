@@ -20,7 +20,14 @@ function fullShape(id, overrides = {}) {
   };
 }
 
-const CURRENT_USER = { id: 19, username: "eviltrout", name: "Robin Ward" };
+// The face rides on avatar_template: core draws no `<img>` without one, so a fixture
+// user meant to be seen needs it as much as any other.
+const CURRENT_USER = {
+  id: 19,
+  username: "eviltrout",
+  name: "Robin Ward",
+  avatar_template: "/e/{size}.png",
+};
 
 function listResponse() {
   return { collections: [], meta: { page: 0, page_size: 30, more: false, total: 0 } };

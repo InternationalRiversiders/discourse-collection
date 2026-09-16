@@ -177,9 +177,9 @@ RSpec.describe DiscourseCollection::Collection::AddTopic do
         expect(membership.note).to be_nil
       end
 
-      # The collect no longer notifies directly — it stamps the pending batch with
-      # the row it inserted and schedules the flush (docs/09 §2).
-      it "stamps the pending 21075 batch and schedules its flush" do
+      # The collect no longer notifies directly — it hands the job the collect and the topic
+      # it was made with, and the job resolves the recipients live (docs/09 §2).
+      it "enqueues the 21075 notification for the collected topic" do
         expect { result }.to change(
           Jobs::DiscourseCollection::NotifyTopicAdded.jobs,
           :size,
@@ -187,18 +187,16 @@ RSpec.describe DiscourseCollection::Collection::AddTopic do
 
         args = Jobs::DiscourseCollection::NotifyTopicAdded.jobs.last["args"].first
 
+        expect(args["collection_id"]).to eq(collection.id)
+        expect(args["topic_id"]).to eq(topic.id)
         expect(args["actor_user_id"]).to eq(actor.id)
-        expect(args["topic_author_id"]).to eq(topic.user_id)
-        expect(
-          DiscourseCollection::TopicAddedNotificationBatch.current?(collection.id, args["stamp"]),
-        ).to eq(true)
       end
     end
 
     context "when topic added notifications are turned off" do
       before { SiteSetting.collection_topic_added_notification_enabled = false }
 
-      it "collects the topic without scheduling the flush" do
+      it "collects the topic without enqueuing the notification" do
         expect { result }.not_to change(
           Jobs::DiscourseCollection::NotifyTopicAdded.jobs,
           :size,
@@ -224,21 +222,8 @@ RSpec.describe DiscourseCollection::Collection::AddTopic do
         expect(collection.reload.last_topic_added_at).to be_within(1.second).of(1.day.ago)
       end
 
-      it "leaves the pending 21075 batch alone on an idempotent re-collect" do
-        stamp =
-          DiscourseCollection::TopicAddedNotificationBatch.register!(
-            collection:,
-            actor_user_id: actor.id,
-            topic:,
-          )
-
+      it "enqueues nothing on an idempotent re-collect" do
         expect { result }.not_to change(Jobs::DiscourseCollection::NotifyTopicAdded.jobs, :size)
-
-        # The batch is neither restamped nor superseded: its original run stays the one
-        # that will fire.
-        expect(
-          DiscourseCollection::TopicAddedNotificationBatch.current?(collection.id, stamp),
-        ).to eq(true)
       end
     end
 

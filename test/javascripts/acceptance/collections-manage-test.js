@@ -8,6 +8,11 @@ const OWNER = { id: 19, username: "eviltrout", name: "Robin Ward" };
 // (needs.user() makes the viewer eviltrout / id 19).
 const OTHER_OWNER = { id: 20, username: "ana", name: "Ana" };
 
+// That fixture user is admin, moderator and staff, so `needs.user()` alone hands a module
+// the staff powers as well. The modules below mean a viewer who holds none of them, and
+// say so; the ones about a staff reader keep the flags and say which.
+const NON_STAFF = { admin: false, moderator: false, staff: false };
+
 const FIRST_ROW = ".collection-topics__list .collection-topic:first-child";
 // The second row is the one carrying inline replies, so it owns the unfeature entry.
 const SECOND_ROW = ".collection-topics__list .collection-topic:nth-child(2)";
@@ -329,7 +334,7 @@ acceptance("Collections reading management — maintainer", function (needs) {
 });
 
 acceptance("Collections reading management — reader", function (needs) {
-  needs.user();
+  needs.user(NON_STAFF);
   needs.settings({ collection_enabled: true });
   needs.pretender((server, helper) => {
     // The detail page also loads the invitation record (docs/05 §2.3) for a viewer

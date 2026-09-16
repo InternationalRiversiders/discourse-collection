@@ -203,10 +203,17 @@ acceptance("Collections topic page reverse lookup", function (needs) {
         postIds: body.getAll(`selected_replies[${mode}][]`),
       });
 
+      // A section written `:topic_id.json` is one dynamic segment to the router, named
+      // after the whole thing — `request.params.topic_id` is always undefined, and the
+      // id is only there with its extension still on it.
+      const topicId = Number(
+        request.params["topic_id.json"]?.replace(/\.json$/, "")
+      );
+
       return helper.response({
         added_at: "2026-06-01T01:00:00.000Z",
         note: "",
-        topic: { id: Number(request.params.topic_id) },
+        topic: { id: topicId },
         selected_replies: [],
       });
     });
@@ -225,9 +232,12 @@ acceptance("Collections topic page reverse lookup", function (needs) {
     assert
       .dom(`${COLLECTED} ${CHIP}`)
       .exists({ count: 2 }, "one chip per collection");
+    // Each chip is read on its own: a selector catching both answers with the first
+    // whichever name is asked for, so the pair would be checked twice over.
+    assert.dom(`${COLLECTED} ${CHIP}:first-of-type`).hasText("Riverside reads");
     assert
-      .dom(`${COLLECTED} ${CHIP}`)
-      .hasText("Riverside reads Quotes", "chips carry names only");
+      .dom(`${COLLECTED} ${CHIP}:last-of-type`)
+      .hasText("Quotes", "chips carry names only");
     assert
       .dom(".collection-topic-chips__add")
       .doesNotExist("the chips carry no inline action");

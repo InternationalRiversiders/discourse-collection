@@ -9,10 +9,9 @@ module DiscourseCollection
   # featured-reply row for that (collection, topic), then maintains the collection counters:
   # topic_count -1 (floor 0), last_topic_added_at recomputed to the newest remaining
   # created_at (NULL when the collection becomes empty) and updated_at = now (docs/08).
-  # The remove sends nothing and touches no notification state (docs/04 §5): un-collecting
-  # is what tells a pending 21075 batch to stand down — the run opened by the removed topic
-  # finds its stamp is no longer the newest membership row and stays quiet, while a run for
-  # some other, still-newest collect is unaffected (docs/09 §2).
+  # The remove sends nothing and touches no notification state (docs/04 §5, docs/09 §2):
+  # each 21075 run is judged against the collect that opened it, so un-collecting a topic
+  # neither silences nor clears the notification that collect produced.
   class Collection::RemoveTopic
     include Service::Base
 

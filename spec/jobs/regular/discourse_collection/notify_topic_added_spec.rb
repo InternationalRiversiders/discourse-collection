@@ -3,11 +3,12 @@
 RSpec.describe Jobs::DiscourseCollection::NotifyTopicAdded do
   fab!(:author, :user)
   fab!(:actor, :user)
-  fab!(:subscriber1, :user)
-  fab!(:subscriber2, :user)
+  # Last seen recently, so core counts them as live and actually publishes their state
+  # (User#allow_live_notifications?).
+  fab!(:subscriber1) { Fabricate(:user, last_seen_at: 1.day.ago) }
+  fab!(:subscriber2) { Fabricate(:user, last_seen_at: 1.day.ago) }
   fab!(:collection) { Fabricate(:collection) }
   fab!(:topic) { Fabricate(:topic, user: author) }
-  fab!(:membership) { Fabricate(:collection_topic, collection:, topic:) }
   fab!(:subscription1) do
     Fabricate(:collection_subscriber, collection:, user: subscriber1)
   end
@@ -17,40 +18,24 @@ RSpec.describe Jobs::DiscourseCollection::NotifyTopicAdded do
 
   NOTIFICATION_TYPE = Notification.types[:collection_topic_added]
 
-  # The collect that opened the batch. One collect both stamps the batch and hands the job
-  # its actor, so both are derived from this — overriding only one of them would exercise a
-  # run production never schedules.
-  let(:batch_actor) { actor }
-  let(:batch_stamp) { register_batch }
   let(:job_args) do
-    {
-      collection_id: collection.id,
-      stamp: batch_stamp,
-      actor_user_id: batch_actor.id,
-      topic_author_id: author.id,
-    }
+    { collection_id: collection.id, topic_id: topic.id, actor_user_id: actor.id }
   end
   subject(:run_job) { described_class.new.execute(**job_args) }
 
-  def collect(topic:, at: nil)
-    attributes = { collection:, topic: }
-    attributes[:created_at] = at if at
-    Fabricate(:collection_topic, **attributes)
-  end
+  # A row the way a previous run would have left it — no topic_id, the two locator keys only.
+  def stored_notification(user, collection: self.collection, at: nil, read: false)
+    now = at || Time.zone.now
 
-  def register_batch(actor_user_id: batch_actor.id, topic: self.topic)
-    DiscourseCollection::TopicAddedNotificationBatch.register!(
-      collection:,
-      actor_user_id:,
-      topic:,
+    Notification.create!(
+      user_id: user.id,
+      notification_type: NOTIFICATION_TYPE,
+      data: { display_username: collection.name, collection_id: collection.id }.to_json,
+      read: read,
+      created_at: now,
+      updated_at: now,
+      skip_send_email: true,
     )
-  end
-
-  def unnotify(topic:)
-    DiscourseCollection::CollectionTopic.where(
-      collection_id: collection.id,
-      topic_id: topic.id,
-    ).delete_all
   end
 
   def notifications_for(user)
@@ -74,56 +59,83 @@ RSpec.describe Jobs::DiscourseCollection::NotifyTopicAdded do
     )
   end
 
-  it "sends once per stamp — a re-delivered run sends nothing" do
+  it "notifies once however often the same run is delivered" do
     run_job
 
     expect { described_class.new.execute(**job_args) }.not_to change { Notification.count }
+    expect(notifications_for(subscriber1).count).to eq(1)
+    expect(notifications_for(subscriber2).count).to eq(1)
   end
 
-  context "when a later collect stamped the batch anew" do
-    let(:batch_stamp) do
-      superseded = register_batch
-      later = Fabricate(:topic)
-      collect(topic: later)
-      register_batch(topic: later)
-      superseded
-    end
+  context "when a subscriber already holds a notification for this collection" do
+    let!(:existing) { stored_notification(subscriber2, at: 3.days.ago, read: true) }
 
-    it "sends nothing — the burst is still open" do
-      expect { run_job }.not_to change { Notification.count }
-    end
-  end
+    it "reuses that row instead of adding another one" do
+      expect { run_job }.to change { Notification.count }.by(1)
 
-  context "when the collect that opened the run was undone" do
-    let(:batch_stamp) do
-      stamp = register_batch
-      unnotify(topic:)
-      stamp
-    end
-
-    it "sends nothing — undoing the collect undoes its notification" do
-      expect { run_job }.not_to change { Notification.count }
-    end
-  end
-
-  context "when some older collect was undone instead" do
-    let(:batch_stamp) do
-      older = Fabricate(:topic)
-      collect(topic: older, at: 2.days.ago)
-      stamp = register_batch
-      unnotify(topic: older)
-      stamp
-    end
-
-    it "still sends — the newest collect is untouched" do
-      expect { run_job }.to change { Notification.count }.by(2)
+      expect(notifications_for(subscriber2).pluck(:id)).to eq([existing.id])
       expect(notifications_for(subscriber1).count).to eq(1)
-      expect(notifications_for(subscriber2).count).to eq(1)
+    end
+
+    it "moves the row back to the top and marks it unread again" do
+      run_job
+
+      refreshed = existing.reload
+      expect(refreshed.read).to eq(false)
+      expect(refreshed.created_at).to be_within(1.second).of(Time.zone.now)
+    end
+
+    it "re-reads the collection name into the first line" do
+      collection.update!(name: "Renamed collection")
+
+      run_job
+
+      expect(JSON.parse(existing.reload.data)["display_username"]).to eq("Renamed collection")
+    end
+
+    context "when the subscriber holds more than one row for this collection" do
+      let!(:newer) { stored_notification(subscriber2) }
+
+      it "keeps the highest id and drops the duplicates" do
+        # Net zero: the duplicate goes (−1), subscriber1 gains a row (+1).
+        expect { run_job }.to change { Notification.count }.by(0)
+
+        expect(notifications_for(subscriber2).pluck(:id)).to eq([newer.id])
+      end
+
+      it "leaves the duplicates of another collection alone" do
+        other = Fabricate(:collection)
+        other_row = stored_notification(subscriber2, collection: other)
+
+        run_job
+
+        expect(Notification.exists?(other_row.id)).to eq(true)
+      end
+    end
+  end
+
+  context "when a subscriber's row was refreshed" do
+    before { stored_notification(subscriber2, at: 3.days.ago) }
+
+    # update_all bypasses the callbacks the live notification state is published from.
+    it "pushes the refreshed subscriber's state" do
+      messages =
+        MessageBus.track_publish("/notification/#{subscriber2.id}") { run_job }
+
+      expect(messages.size).to eq(1)
+    end
+
+    # BulkCreate publishes for the rows it inserts, so the job must not push for them too.
+    it "leaves the push for a new row to BulkCreate, exactly once" do
+      messages =
+        MessageBus.track_publish("/notification/#{subscriber1.id}") { run_job }
+
+      expect(messages.size).to eq(1)
     end
   end
 
   context "when the acting user subscribes" do
-    let(:batch_actor) { subscriber2 }
+    let(:job_args) { super().merge(actor_user_id: subscriber2.id) }
 
     it "skips that subscriber" do
       expect { run_job }.to change { Notification.count }.by(1)
@@ -170,6 +182,97 @@ RSpec.describe Jobs::DiscourseCollection::NotifyTopicAdded do
     end
   end
 
+  context "when the topic sits in an unrestricted category" do
+    it "answers from the topic alone, without asking each recipient's Guardian" do
+      Guardian.any_instance.expects(:can_see_topic?).never
+
+      run_job
+    end
+  end
+
+  context "when the topic sits in a restricted category" do
+    fab!(:group)
+    fab!(:category) { Fabricate(:private_category, group:) }
+    let(:topic) { Fabricate(:topic, user: author, category:) }
+
+    context "when only some subscribers may see it" do
+      before { group.add(subscriber1) }
+
+      it "notifies only those subscribers" do
+        expect { run_job }.to change { Notification.count }.by(1)
+        expect(notifications_for(subscriber1).count).to eq(1)
+        expect(notifications_for(subscriber2).count).to eq(0)
+      end
+
+      it "neither floats nor unreads the existing row of a subscriber who may not" do
+        existing = stored_notification(subscriber2, at: 3.days.ago, read: true)
+
+        run_job
+
+        expect(existing.reload.read).to eq(true)
+        expect(existing.reload.created_at).to be_within(1.second).of(3.days.ago)
+      end
+    end
+
+    context "when no subscriber may see it" do
+      it "writes nothing at all" do
+        expect { run_job }.not_to change { Notification.count }
+      end
+    end
+  end
+
+  # Unlisted is a listing rule, not a read rule: the reading page keeps such a topic for
+  # whoever may list it, namely staff and TL4. The notification follows the same rule, and
+  # per recipient — the fast path cannot answer it, since the topic belongs to some
+  # subscribers and not others.
+  context "when the topic is unlisted" do
+    let(:topic) do
+      Fabricate(:topic, user: author).tap { |unlisted| unlisted.update_column(:visible, false) }
+    end
+
+    it "notifies nobody when no subscriber may list it" do
+      expect { run_job }.not_to change { Notification.count }
+    end
+
+    it "neither floats nor unreads the existing row of a subscriber who may not list it" do
+      existing = stored_notification(subscriber2, at: 3.days.ago, read: true)
+
+      run_job
+
+      expect(existing.reload.read).to eq(true)
+      expect(existing.reload.created_at).to be_within(1.second).of(3.days.ago)
+    end
+
+    context "when a subscriber may list unlisted topics" do
+      fab!(:lister) { Fabricate(:user, trust_level: TrustLevel[4]) }
+      fab!(:listers_subscription) { Fabricate(:collection_subscriber, collection:, user: lister) }
+
+      it "notifies that subscriber only" do
+        expect { run_job }.to change { Notification.count }.by(1)
+
+        expect(notifications_for(lister).count).to eq(1)
+        expect(notifications_for(subscriber1).count).to eq(0)
+        expect(notifications_for(subscriber2).count).to eq(0)
+      end
+    end
+  end
+
+  # A deleted topic is listed by the reading page to nobody — its feed joins on
+  # topics.deleted_at IS NULL — so it notifies nobody either, staff included. Settled before
+  # the recipients are asked, because can_see_topic? does serve a deleted topic to a
+  # moderator of its category.
+  context "when the collected topic has been deleted" do
+    let(:topic) do
+      Fabricate(:topic, user: author).tap { |gone| gone.update_column(:deleted_at, Time.zone.now) }
+    end
+
+    it "notifies nobody, staff subscribers included" do
+      Fabricate(:collection_subscriber, collection:, user: Fabricate(:admin))
+
+      expect { run_job }.not_to change { Notification.count }
+    end
+  end
+
   context "when the collection no longer exists" do
     let(:job_args) { super().merge(collection_id: -999) }
 
@@ -178,19 +281,51 @@ RSpec.describe Jobs::DiscourseCollection::NotifyTopicAdded do
     end
   end
 
-  context "when the only subscriber is excluded" do
-    let(:batch_actor) { subscriber1 }
+  context "when the topic no longer exists" do
+    let(:job_args) { super().merge(topic_id: -999) }
 
-    # Deleting the let_it_be-shared fab! instance itself would hit the composite-key
-    # destroy path; delete by primary key the way production code does.
+    it "creates nothing" do
+      expect { run_job }.not_to change { Notification.count }
+    end
+  end
+
+  context "when the only subscriber is excluded" do
+    # Deleting the fab!-shared instance itself would hit the composite-key destroy path;
+    # delete by primary key the way production code does.
     before do
       DiscourseCollection::CollectionSubscriber
         .where(collection_id: collection.id, user_id: subscriber2.id)
         .delete_all
     end
 
+    let(:job_args) { super().merge(actor_user_id: subscriber1.id) }
+
     it "creates nothing once no recipient is left" do
       expect { run_job }.not_to change { Notification.count }
+    end
+  end
+
+  # None of this plugin's four types mails: the new rows are handed to BulkCreate with
+  # skip_send_email rather than leaning on core having no EmailUser method named after the
+  # type.
+  it "processes no email" do
+    NotificationEmailer.expects(:process_notification).never
+
+    run_job
+  end
+
+  context "when a recipient is in do not disturb mode" do
+    before do
+      Fabricate(
+        :do_not_disturb_timing,
+        user: subscriber1,
+        starts_at: 1.hour.ago,
+        ends_at: 1.hour.from_now,
+      )
+    end
+
+    it "shelves nothing" do
+      expect { run_job }.not_to change { ShelvedNotification.count }
     end
   end
 end

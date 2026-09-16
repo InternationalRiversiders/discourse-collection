@@ -11,6 +11,9 @@ module Jobs
     # (docs/09 §1). Runs async and re-checks the row: an invite that vanished (collection
     # deletion cascades the row away) or is still pending (not yet decided) gets
     # nothing, and a deleted inviter account is not notified.
+    #
+    # Never mails: skip_send_email is set explicitly rather than left to the accident that
+    # core has no EmailUser method named after this type.
     class NotifyInvitationResult < ::Jobs::Base
       def execute(args = {})
         invite =
@@ -33,6 +36,7 @@ module Jobs
         ::Notification.create!(
           notification_type: ::Notification.types[type],
           user_id: invite.inviter_user_id,
+          skip_send_email: true,
           data: {
             display_username: invite.invitee.username,
             action_type: invite.action_type,

@@ -125,7 +125,13 @@ acceptance("Collections owner other collections", function (needs) {
   test("titles the owner's other collections and lists them as chips", async function (assert) {
     await visit("/collections/12");
 
-    // The heading names the list; the chips beside it stay names only.
+    const chips =
+      ".collection-detail__owner-collections a.collection-chips__chip";
+
+    // The heading names the list; the chips beside it stay names only, so each one is
+    // read on its own — a selector catching both would answer with the first every
+    // time. `:first-of-type`/`:last-of-type` count anchors, leaving the row's trailing
+    // button out of it.
     assert
       .dom(
         ".collection-detail__owner-collections .collection-detail__subheading"
@@ -133,12 +139,9 @@ acceptance("Collections owner other collections", function (needs) {
       .hasText(
         i18n("collections.owner_collections.heading", { username: "river" })
       );
-    assert
-      .dom(".collection-detail__owner-collections a.collection-chips__chip")
-      .exists({ count: 2 }, "one chip per collection");
-    assert
-      .dom(".collection-detail__owner-collections a.collection-chips__chip")
-      .hasText("Riverside reads Quotes", "chips carry names only");
+    assert.dom(chips).exists({ count: 2 }, "one chip per collection");
+    assert.dom(`${chips}:first-of-type`).hasText("Riverside reads");
+    assert.dom(`${chips}:last-of-type`).hasText("Quotes");
   });
 
   test("links each chip to its collection", async function (assert) {

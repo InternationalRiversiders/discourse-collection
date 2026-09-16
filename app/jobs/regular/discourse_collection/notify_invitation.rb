@@ -10,6 +10,17 @@ module Jobs
     # an invite that was revoked (physically deleted => row gone), already answered or
     # expired by the time the job runs is not notified. An initiator whose account was
     # deleted (FK ON DELETE SET NULL) gets nothing — there is nobody to credit.
+    #
+    # data holds locators only (docs/09 §1): the inviter (display_username, the slot core
+    # renders as the first line), the action_type picking the wording, and the collection.
+    # invite_id is the one key nothing renders — it is how the invitation flow finds this
+    # notification again when the invitation stops waiting for an answer, whether the
+    # invitee answered it (AcceptInvite / RejectInvite) or the issuer called it off
+    # (RevokeInvite). Two invitations for the same collection can be pending at once, so
+    # that lookup cannot be done on the collection.
+    #
+    # Never mails: skip_send_email is set explicitly rather than left to the accident that
+    # core has no EmailUser method named after this type.
     class NotifyInvitation < ::Jobs::Base
       def execute(args = {})
         invite =
@@ -25,11 +36,13 @@ module Jobs
         ::Notification.create!(
           notification_type: ::Notification.types[:collection_invitation],
           user_id: invite.invitee_user_id,
+          skip_send_email: true,
           data: {
             display_username: invite.inviter.username,
             action_type: invite.action_type,
             collection_id: invite.collection.id,
             collection_name: invite.collection.name,
+            invite_id: invite.id,
           }.to_json,
         )
       end

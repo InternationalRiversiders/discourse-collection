@@ -420,8 +420,17 @@ acceptance("Collections reading feed", function (needs) {
     await settled();
 
     assert.dom(".topic-selected-replies__topic").hasText("Riverside topic 102");
-    assert.dom(".topic-selected-replies__reply").exists({ count: overflowReplies.length });
-    assert.dom(".topic-selected-replies__reply-user").containsText("bob", "overflow rows beyond the inline window load");
+    assert
+      .dom(".topic-selected-replies__reply")
+      .exists({ count: overflowReplies.length });
+    // The third row is past the two the page showed inline, so reading it here is what
+    // says the window loads the rest. Asking the set would land on row one — ana —
+    // whatever name were given.
+    assert
+      .dom(
+        ".topic-selected-replies__reply:nth-child(3) .topic-selected-replies__reply-user"
+      )
+      .containsText("bob", "overflow rows beyond the inline window load");
 
     const author = document.querySelector(
       ".topic-selected-replies__reply .topic-selected-replies__reply-user"

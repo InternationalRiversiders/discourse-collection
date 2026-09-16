@@ -13,11 +13,10 @@ module DiscourseCollection
   # row (has_selected_reply stays false), bumps topic_count / last_topic_added_at and
   # touches updated_at (docs/08). Collecting is capped by
   # collection_max_topics_per_collection; the note is length-guarded (≤100) so the DB
-  # column never raises. A fresh collect stamps the 21075 batch with the row it inserted and
-  # schedules its flush from a post-transaction step, so subscribers eventually learn about
-  # the new topic; with collection_topic_added_notification_enabled off that occurrence
-  # schedules nothing at all. The idempotent re-collect neither opens a batch nor restarts
-  # the window (docs/09 §2).
+  # column never raises. A fresh collect enqueues the 21075 notification from a
+  # post-transaction step, so subscribers learn about the new topic; with
+  # collection_topic_added_notification_enabled off that occurrence enqueues nothing at all.
+  # The idempotent re-collect enqueues nothing either (docs/09 §2).
   class Collection::AddTopic
     include Service::Base
 
@@ -103,18 +102,18 @@ module DiscourseCollection
       context[:topic_collected] = true
     end
 
-    # 21075 collection_topic_added (docs/09 §2): the collect schedules a flushed batch one
-    # silence window out, stamped with the row it inserted — collecting again inside the
-    # window schedules another run stamped later, and only the run whose stamp is still the
-    # newest row sends. The batch carries locators only; who receives what (the actor
-    # excluded, and the ignore rule) is resolved live by the job.
+    # 21075 collection_topic_added (docs/09 §2): one run per collect, enqueued with no
+    # delay. The job carries locators only; who receives what (the actor excluded, and the
+    # ignore and visibility rules) is resolved live by the job.
     def register_topic_added_notification(collection:, topic:, guardian:)
       return unless context[:topic_collected]
+      return unless SiteSetting.collection_topic_added_notification_enabled
 
-      TopicAddedNotificationBatch.register!(
-        collection: collection,
+      ::Jobs.enqueue(
+        ::Jobs::DiscourseCollection::NotifyTopicAdded,
+        collection_id: collection.id,
+        topic_id: topic.id,
         actor_user_id: guardian.user.id,
-        topic: topic,
       )
     end
   end

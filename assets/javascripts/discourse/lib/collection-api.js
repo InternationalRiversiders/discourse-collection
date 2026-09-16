@@ -230,3 +230,10 @@ export function subscribeToCollection(id) {
 export function unsubscribeFromCollection(id) {
   return ajax(`/collections/${id}/subscription.json`, { type: "DELETE" });
 }
+
+// docs/09 §1 mark the caller's unread notifications about this collection as read. Sent
+// when the collection page opens, behind a client-side gate (lib/collection-notifications.js)
+// that opens per type rather than per collection, so a no-op 200 is an ordinary outcome.
+export function markCollectionNotificationsRead(id) {
+  return ajax(`/collections/${id}/read_notifications.json`, { type: "PUT" });
+}

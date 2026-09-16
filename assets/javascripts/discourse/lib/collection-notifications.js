@@ -125,6 +125,36 @@ export function registerCollectionNotificationRenderers(api) {
   );
 }
 
+// The three types whose link is the collection page (docs/09 §1), so opening that page
+// settles them. The fourth type is deliberately absent: it leads to the invitation inbox,
+// and answering or revoking the invitation deletes the row outright.
+const COLLECTION_PAGE_TYPES = [
+  "collection_topic_added",
+  "collection_invitation_accepted",
+  "collection_invitation_declined",
+];
+
+/**
+ * Whether opening a collection page should ask the server to mark this viewer's
+ * notifications about it as read.
+ *
+ * The counts core hands the client are per type, not per collection, so this answers "the
+ * viewer has unread collection notifications somewhere" — a collection they have none on
+ * opens the gate too, and the server makes that a no-op. Fail-closed: an unreadable
+ * payload reads as zero, leaving the notifications unread rather than firing a request on
+ * every page load.
+ */
+export function shouldMarkCollectionNotificationsRead(currentUser, site) {
+  const counts = currentUser?.grouped_unread_notifications;
+  const types = site?.notification_types;
+
+  if (!counts || !types) {
+    return false;
+  }
+
+  return COLLECTION_PAGE_TYPES.some((name) => counts[types[name]] > 0);
+}
+
 // The two action_type values the jobs store (the same constants the invite flow
 // uses); anything that is not a co-maintainer invitation is an ownership transfer.
 function roleKey(actionType) {

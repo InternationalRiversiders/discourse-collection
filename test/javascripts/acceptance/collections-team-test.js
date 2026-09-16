@@ -9,6 +9,11 @@ const VIEWER = { id: 19, username: "eviltrout", name: "Robin Ward" };
 const RIVER = { id: 2, username: "river", name: "River" };
 const OTHER_OWNER = { id: 20, username: "ana", name: "Ana" };
 
+// That fixture user is admin, moderator and staff, so `needs.user()` alone hands a module
+// the staff management role as well. The modules below mean a viewer who holds no such
+// role, and say so; the ones about a staff reader keep the flags and say which.
+const NON_STAFF = { admin: false, moderator: false, staff: false };
+
 const DIALOG = ".dialog-body";
 const DIALOG_CONFIRM = ".dialog-footer .btn-danger";
 
@@ -232,7 +237,7 @@ acceptance("Collections team — co-maintainer", function (needs) {
     requests.removed = [];
   });
 
-  needs.user();
+  needs.user(NON_STAFF);
   needs.settings({ collection_enabled: true });
   needs.pretender((server, helper) => {
     // The detail page also loads the invitation record (docs/05 §2.3) for a viewer
@@ -296,7 +301,7 @@ acceptance("Collections team — co-maintainer", function (needs) {
 });
 
 acceptance("Collections team — plain reader", function (needs) {
-  needs.user();
+  needs.user(NON_STAFF);
   needs.settings({ collection_enabled: true });
   needs.pretender((server, helper) => {
     // The detail page also loads the invitation record (docs/05 §2.3) for a viewer

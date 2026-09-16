@@ -11,7 +11,7 @@ module DiscourseCollection
     before_action :ensure_write_access,
                   only: %i[
                     create update destroy remove_maintainer subscribe unsubscribe
-                    create_invite revoke_invite accept_invite reject_invite
+                    read_notifications create_invite revoke_invite accept_invite reject_invite
                     add_topic remove_topic update_collected_topic rewrite_topic_note
                   ]
 
@@ -268,6 +268,18 @@ module DiscourseCollection
     def unsubscribe
       Collection::Unsubscribe.call(service_params) do
         on_success { |collection:| render_collection_full(collection) }
+        on_failed_contract { |contract| render_error_response(contract.errors.full_messages) }
+        on_model_not_found(:collection) { raise Discourse::NotFound }
+      end
+    end
+
+    # PUT /collections/:id/read_notifications.json — mark the caller's unread notifications
+    # about this collection as read. Sent fire-and-forget by the collection page behind a
+    # client-side gate (per type, not per collection), so a no-op is an ordinary outcome and
+    # still answers 200. Only the caller's own rows are touched: no owner/maintainer gate.
+    def read_notifications
+      Collection::MarkNotificationsRead.call(service_params) do
+        on_success { render json: success_json }
         on_failed_contract { |contract| render_error_response(contract.errors.full_messages) }
         on_model_not_found(:collection) { raise Discourse::NotFound }
       end
