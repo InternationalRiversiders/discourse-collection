@@ -48,6 +48,27 @@ module DiscourseCollection
       user.present? && (user.admin? || (user.moderator? && collection_moderators_can_manage?))
     end
 
+    # May open this collection's subscriber list (docs/02 §5): the site setting names the
+    # minimum role, and its levels are cumulative. Ownership is asked of THIS collection, so
+    # the same viewer may read one collection's list and not another's. Staff here is core
+    # staff (admin and moderator, always) — not the narrower management role above.
+    # Anonymous callers never arrive: the action raises NotLoggedIn first, whatever this
+    # setting says (docs/01 §2).
+    def can_view_subscribers?
+      return false if user.blank?
+
+      case SiteSetting.collection_subscribers_visibility.to_s
+      when "admin" then user.admin?
+      when "staff" then user.staff?
+      when "staff_owner" then user.staff? || owner?
+      when "staff_owner_teamworker" then user.staff? || owner? || team_worker?
+      # logged_in, the default. Any other value means "not configured" rather than
+      # "misconfigured" (valid_value? refuses every other value at the write), so it reads
+      # as the default instead of taking the list away from everyone.
+      else true
+      end
+    end
+
     # Cap exemption roles (docs/03 §2 / docs/02 §3): whoever the site setting names is
     # exempt from the per-user collection cap and the per-collection co-maintainer cap.
     # Instance methods delegate to the class helpers so services can ask about a user

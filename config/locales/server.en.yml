@@ -3,6 +3,7 @@ en:
     collection_enabled: "Enable the public Collections feature."
     collection_allow_anonymous: "Allow anonymous users to access collections. When disabled, the API rejects requests and the entry is hidden."
     collection_moderators_can_manage_collections: "Allow moderators to manage collections they do not own: change the name and description, and change the owner. Admins can always do this regardless of this setting. Useful for fixing non-compliant names and descriptions."
+    collection_subscribers_visibility: "Select who may open a collection's subscriber list."
     collection_onebox_enabled: "Render a collection card when a post links to a collection on a line of its own, and a titled link when the link sits inside a sentence."
     collection_onebox_disabled_categories: "Categories whose topics never render collection oneboxes: both the card and the titled link are suppressed. Leave empty to allow oneboxes in every category."
     collection_create_allowed_groups: "Groups whose members may create collections. Becoming the owner of an existing collection also requires membership here. Leave empty to disallow creating collections or becoming a new owner for everyone. Membership is only checked when the operation happens."

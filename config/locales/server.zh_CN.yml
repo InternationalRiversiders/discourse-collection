@@ -3,6 +3,7 @@ zh_CN:
     collection_enabled: "启用公共专辑（淘专辑）功能。"
     collection_allow_anonymous: "允许未登录用户访问公共专辑。关闭时 API 拒绝、前端不显示入口。"
     collection_moderators_can_manage_collections: "允许版主管理其不拥有的专辑：改名称和描述、改 owner。无论此设置如何，管理员始终可管理。用于修正不合规的名称与描述。"
+    collection_subscribers_visibility: "选择谁可以打开专辑的订阅者列表。"
     collection_onebox_enabled: "帖子中的专辑链接独占一行时渲染为卡片，位于句子中间时渲染为带标题的链接。"
     collection_onebox_disabled_categories: "这些分类下的话题不渲染专辑 onebox：卡片与句中链接标题一并抑制。留空表示所有分类都允许。"
     collection_create_allowed_groups: "允许创建专辑的群组。成为现有专辑的新 owner 同样须命中本设置。留空表示任何人都不能创建专辑或成为新 owner。成员资格只在操作发生那一刻判定。"

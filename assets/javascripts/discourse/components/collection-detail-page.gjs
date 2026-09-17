@@ -10,6 +10,7 @@ import CollectionTopics from "./collection-topics";
 import CollectionUser from "./collection-user";
 import CollectionFormModal from "./modal/collection-form-modal";
 import CollectionInviteModal from "./modal/collection-invite-modal";
+import CollectionSubscribersModal from "./modal/collection-subscribers-modal";
 import dFormatDate from "discourse/ui-kit/helpers/d-format-date";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
 import dNumber from "discourse/ui-kit/helpers/d-number";
@@ -53,6 +54,18 @@ export default class CollectionDetailPage extends Component {
       return i18n("collections.detail.unsubscribe");
     }
     return i18n("collections.detail.subscribe");
+  }
+
+  // Who the roster is open to is the controller's call (docs/02 §5): a list of users stays
+  // closed even where the collection itself is public, and the site setting may close it
+  // further. What is left here is the empty case — a list with nobody on it has nothing to
+  // open, so the entry appears only once there is a subscriber behind the count. Everyone
+  // else keeps the count alone, which is part of the collection itself.
+  get canViewSubscribers() {
+    return (
+      this.args.controller.canViewSubscribers &&
+      this.args.controller.subscriberCount > 0
+    );
   }
 
   // The owner's other collections (docs/03 §4): the heading names whose list this is, and
@@ -120,6 +133,14 @@ export default class CollectionDetailPage extends Component {
         onSent: this.args.controller.loadInvites,
         onTakenOver: this.args.controller.applyOwnership,
       },
+    });
+  }
+
+  // The roster is its own fetch: the page never carries the list itself, only the count.
+  @action
+  viewSubscribers() {
+    this.modal.show(CollectionSubscribersModal, {
+      model: { collectionId: this.args.collection.id },
     });
   }
 
@@ -208,6 +229,17 @@ export default class CollectionDetailPage extends Component {
               >
                 {{dIcon this.subscribeIcon}}
                 {{this.subscribeLabel}}
+              </button>
+            {{/if}}
+
+            {{#if this.canViewSubscribers}}
+              <button
+                type="button"
+                class="btn collection-detail__subscribers"
+                {{on "click" this.viewSubscribers}}
+              >
+                {{dIcon "bookmark"}}
+                {{i18n "collections.detail.view_subscribers"}}
               </button>
             {{/if}}
 

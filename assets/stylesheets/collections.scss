@@ -1,3 +1,5 @@
+@use "lib/viewport";
+
 // Core colours anchors from selectors that outrank a bare class (`common/foundation/base.scss`),
 // and they keep matching for as long as the pointer is on the anchor, so an anchor this file
 // colours itself states that colour for `:link` and `:visited` alike and then spells out its
@@ -1135,6 +1137,19 @@
   }
 }
 
+// A card opened by one of those anchors from inside a modal (the subscriber roster, the
+// invitation records, the selected replies) comes up behind it: core portals every menu
+// content to a host outside the app root and gives the lot the composer-dropdown layer,
+// while the modal it was opened from sits at `z("modal", "content")` with its backdrop
+// just below. Core lifts the card clear only for the full-screen mobile one, hence the
+// breakpoint here — this restores the card's usual place above the page for the wide
+// layout, and still keeps it under core's a11y dialogs, which outrank modals anyway.
+@include viewport.from(sm) {
+  .modal-open .fk-d-menu[data-identifier="usercard"] {
+    z-index: z("modal", "content") + 1;
+  }
+}
+
 .topic-selected-replies {
   display: grid;
   gap: 0.6rem;
@@ -1200,6 +1215,29 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    min-width: 0;
+  }
+
+  &__empty {
+    margin: 0;
+    color: var(--primary-medium);
+  }
+}
+
+// One collection's subscriber roster, opened from the detail page's subscriber entry.
+// A column of the same avatar + username every other user list here draws; the columns
+// wrap so a long roster stays readable instead of running down the window.
+.collection-subscribers {
+  &__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(12em, 1fr));
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__subscriber {
     min-width: 0;
   }
 

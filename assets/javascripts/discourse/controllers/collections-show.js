@@ -24,6 +24,7 @@ import {
 import { confirmAction } from "../lib/confirm";
 import { inviteRoleName, inviteStatusLabel } from "../lib/invite-labels";
 import { READING_SORT_DEFAULT, READING_SORT_FIELDS } from "../lib/reading-sort";
+import { canViewSubscriberList } from "../lib/subscriber-visibility";
 
 // How much of the invitation record the collection page itself carries — the rest is
 // one click away in CollectionInviteRecordsModal.
@@ -210,6 +211,19 @@ export default class CollectionsShowController extends Controller {
 
   get canInviteOwner() {
     return this.isOwner || this.canManageCollectionAsStaff;
+  }
+
+  // Who may open the roster (docs/02 §5): the site setting names the minimum role, and both
+  // the setting and the viewer's roles on this collection are already on the page. The
+  // server re-checks; this only picks the rendering. The count is a separate matter the
+  // entry adds on top of it.
+  get canViewSubscribers() {
+    return canViewSubscriberList({
+      setting: this.siteSettings.collection_subscribers_visibility,
+      user: this.currentUser,
+      isOwner: this.isOwner,
+      isTeamworker: this.isTeamworker,
+    });
   }
 
   // The viewer's own id, for "did I issue this invitation" — a guest has none, and

@@ -2,11 +2,13 @@
 
 module DiscourseCollection
   class CollectionsController < BaseController
-    # Read access gate only for the public read actions. `mine` always requires a
-    # logged-in user (it is scoped to "me"), so it checks that inside the action.
+    # Read access gate only for the public read actions. `mine` / `subscribed` /
+    # `invites_inbox` are all scoped to "me" and `subscribers` hands out a user list:
+    # those four require a logged-in user, so they check that inside the action —
+    # `subscribers` narrowing further still by collection_subscribers_visibility.
     before_action :ensure_read_access,
                   only: %i[
-                    index show subscribers topics selected_replies selected_replies_count
+                    index show topics selected_replies selected_replies_count
                     collected_topic
                   ]
     # Write endpoints always require login; the owner/staff permission matrix is then
@@ -288,18 +290,29 @@ module DiscourseCollection
       end
     end
 
-    # GET /collections/:id/subscribers.json — public subscriber list (docs/02 §5):
-    # counted subscription rows only (current owner never appears), pageable, oldest
-    # subscription first (the subscribers table carries no updated_at).
+    # GET /collections/:id/subscribers.json — subscriber list (docs/02 §5): counted
+    # subscription rows only (current owner never appears), pageable, most recent
+    # subscription first (the subscribers table carries no updated_at). Logged in only,
+    # like `mine` / `subscribed` above: the collection itself may be readable by an
+    # anonymous visitor, a list of users is not, so guests get 403 here whatever
+    # collection_allow_anonymous says (docs/01 §2). Past that gate the roster narrows again
+    # by collection_subscribers_visibility, which asks the caller's role on THIS collection.
     def subscribers
+      raise Discourse::NotLoggedIn if current_user.blank?
+
       collection = find_collection(params[:id])
+      # Before the pagination params: a caller the setting turns away must get the 403, not
+      # a 400 for the page_size they happened to send.
+      policy = CollectionPolicy.for(collection:, user: current_user)
+      raise Discourse::InvalidAccess unless policy.can_view_subscribers?
+
       page, page_size = pagination_params
 
       rows = Collection.counted_subscriber_rows(collection.id).includes(:user)
       total = rows.count
       users =
         rows
-          .order("collection_subscribers.created_at ASC")
+          .order("collection_subscribers.created_at DESC")
           .offset(page * page_size)
           .limit(page_size)
           .map { |row| ::BasicUserSerializer.new(row.user, scope: guardian, root: false).as_json }

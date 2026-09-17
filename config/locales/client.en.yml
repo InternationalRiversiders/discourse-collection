@@ -95,6 +95,12 @@ en:
         last_activity: "Last activity"
         subscribe: "Subscribe"
         unsubscribe: "Unsubscribe"
+        # The subscriber roster (docs/02 §5), opened from the entry beside the subscribe
+        # button. The list is newest subscription first, so its title names what the opening
+        # page holds; paging walks back to the older ones.
+        view_subscribers: "View subscribers"
+        subscribers_title: "Recent subscribers"
+        subscribers_empty: "No subscribers yet"
         team: "Team"
         edit: "Edit"
         delete: "Delete"
@@ -242,3 +248,9 @@ en:
           nobody: "No one"
           admin: "Admin"
           staff: "Staff"
+        collection_subscribers_visibility:
+          admin: "Admin"
+          staff: "Staff"
+          staff_owner: "Staff and owners"
+          staff_owner_teamworker: "Staff, owners and co-maintainers"
+          logged_in: "Any logged-in user"

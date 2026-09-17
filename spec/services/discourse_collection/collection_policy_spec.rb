@@ -78,6 +78,90 @@ RSpec.describe DiscourseCollection::CollectionPolicy do
     end
   end
 
+  # docs/02 §5 — the five levels are cumulative, so each context adds one role to the
+  # previous and the viewer's roles are asked of THIS collection (the fixture gives it an
+  # owner and a co-maintainer, and neither of them is staff).
+  describe "#can_view_subscribers?" do
+    context "when the visibility is admin" do
+      before { SiteSetting.collection_subscribers_visibility = "admin" }
+
+      it "admits admins only" do
+        expect(described_class.for(collection:, user: admin).can_view_subscribers?).to eq(true)
+        expect(described_class.for(collection:, user: moderator).can_view_subscribers?).to eq(false)
+        expect(described_class.for(collection:, user: owner_user).can_view_subscribers?).to eq(false)
+        expect(described_class.for(collection:, user: co_worker_user).can_view_subscribers?).to eq(
+          false,
+        )
+        expect(described_class.for(collection:, user: regular_user).can_view_subscribers?).to eq(
+          false,
+        )
+        expect(described_class.for(collection:, user: nil).can_view_subscribers?).to eq(false)
+      end
+    end
+
+    context "when the visibility is staff" do
+      before { SiteSetting.collection_subscribers_visibility = "staff" }
+
+      it "admits admins and moderators, whatever the collection management setting says" do
+        SiteSetting.collection_moderators_can_manage_collections = false
+
+        expect(described_class.for(collection:, user: admin).can_view_subscribers?).to eq(true)
+        expect(described_class.for(collection:, user: moderator).can_view_subscribers?).to eq(true)
+        expect(described_class.for(collection:, user: owner_user).can_view_subscribers?).to eq(false)
+        expect(described_class.for(collection:, user: regular_user).can_view_subscribers?).to eq(
+          false,
+        )
+      end
+    end
+
+    context "when the visibility is staff_owner" do
+      before { SiteSetting.collection_subscribers_visibility = "staff_owner" }
+
+      it "adds this collection's owner, but not its co-maintainers" do
+        expect(described_class.for(collection:, user: owner_user).can_view_subscribers?).to eq(true)
+        expect(described_class.for(collection:, user: co_worker_user).can_view_subscribers?).to eq(
+          false,
+        )
+        expect(described_class.for(collection:, user: regular_user).can_view_subscribers?).to eq(
+          false,
+        )
+      end
+
+      it "does not carry ownership over to another collection" do
+        other = Fabricate(:collection)
+
+        expect(described_class.for(collection: other, user: owner_user).can_view_subscribers?).to eq(
+          false,
+        )
+      end
+    end
+
+    context "when the visibility is staff_owner_teamworker" do
+      before { SiteSetting.collection_subscribers_visibility = "staff_owner_teamworker" }
+
+      it "adds this collection's co-maintainers" do
+        expect(described_class.for(collection:, user: owner_user).can_view_subscribers?).to eq(true)
+        expect(described_class.for(collection:, user: co_worker_user).can_view_subscribers?).to eq(
+          true,
+        )
+        expect(described_class.for(collection:, user: regular_user).can_view_subscribers?).to eq(
+          false,
+        )
+        expect(described_class.for(collection:, user: nil).can_view_subscribers?).to eq(false)
+      end
+    end
+
+    context "when the visibility is logged_in (the default)" do
+      it "admits any signed-in user and turns anonymous visitors away" do
+        expect(SiteSetting.collection_subscribers_visibility).to eq("logged_in")
+        expect(described_class.for(collection:, user: regular_user).can_view_subscribers?).to eq(
+          true,
+        )
+        expect(described_class.for(collection:, user: nil).can_view_subscribers?).to eq(false)
+      end
+    end
+  end
+
   describe "#exempt_from_collection_cap?" do
     context "when the unlimited role is set to nobody" do
       before { SiteSetting.collection_unlimited_collections_role = "nobody" }

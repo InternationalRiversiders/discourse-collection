@@ -29,7 +29,7 @@ Discourse 插件：公开「淘专辑」/公共收藏夹。功能与使用见 [R
 
    除上述之外无辅助索引。`collections` 四条对应四个 API 排序字段（双向靠正向 / 反向扫描共用一条），其中 `last_topic_added_at` 必须逐字写成 `DESC NULLS LAST`——controller 的两个排序方向都带显式空值位置，btree 默认形态匹配不上。
 
-6. 游客访问由站点设置 `collection_allow_anonymous` 控制，默认关闭（API 拒绝、前端无入口）；开启后游客可见。所有主题/帖子列表服务端按访问者 Guardian 过滤，返回前剔除无权访问项。
+6. 游客访问由站点设置 `collection_allow_anonymous` 控制，默认关闭（API 拒绝、前端无入口）；开启后游客可见。所有主题/帖子列表服务端按访问者 Guardian 过滤，返回前剔除无权访问项。**例外**：`mine` / `subscribed` / 收件箱（`GET /collections/invites`）/ 订阅者名单（`GET /collections/:id/subscribers`）四个读端点为登录专用，匿名一律 403、不受该设置影响——做法统一为不进 `ensure_read_access`、动作首行 `raise Discourse::NotLoggedIn`（见 [docs/01 §2](docs/01-通用约定.md)）。**其中订阅者名单在登录之上另受站点设置 `collection_subscribers_visibility` 分档收窄**——判定按访问者在该专辑的角色，默认档 `logged_in` = 任意登录用户，即上面这句的口径（取值与逐档判定见 [docs/02 §5](docs/02-路由总表.md)）。
 
 ## 开发方式
 

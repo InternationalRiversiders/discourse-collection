@@ -238,6 +238,16 @@ export function unsubscribeFromCollection(id) {
   return ajax(`/collections/${id}/subscription.json`, { type: "DELETE" });
 }
 
+// docs/02 §5 one page of a collection's subscribers, most recent subscription first
+// (never the current owner, who is the one subscriber that does not count). Logged in
+// only: the collection itself may be open to anonymous visitors, a list of users is not,
+// so a guest asking for this gets a 403 (docs/01 §2). Past login, who gets in is the
+// site's call — collection_subscribers_visibility names the minimum role, judged against
+// this collection (lib/subscriber-visibility.js is the page's copy of that rule).
+export function listSubscribers(id, options = {}) {
+  return ajax(`/collections/${id}/subscribers.json`, { data: pageData(options) });
+}
+
 // docs/09 §1 mark the caller's unread notifications about this collection as read. Sent
 // when the collection page opens, behind a client-side gate (lib/collection-notifications.js)
 // that opens per type rather than per collection, so a no-op 200 is an ordinary outcome.

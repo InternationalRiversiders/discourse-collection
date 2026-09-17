@@ -85,3 +85,8 @@ discourse_collection:
     type: category_list
   collection_topic_added_notification_enabled:
     default: true
+  collection_subscribers_visibility:
+    default: logged_in
+    type: enum
+    enum: CollectionSubscribersVisibilitySiteSetting
+    client: true

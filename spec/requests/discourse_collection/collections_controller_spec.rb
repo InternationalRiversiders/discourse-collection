@@ -1515,11 +1515,19 @@ RSpec.describe DiscourseCollection::CollectionsController do
       expect(response.status).to eq(404)
     end
 
-    context "when anonymous access is disabled" do
-      it "rejects anonymous visitors with a 404" do
+    context "when anonymous" do
+      it "rejects anonymous visitors with a 403" do
         get "/collections/#{collection.id}/subscribers.json"
 
-        expect(response.status).to eq(404)
+        expect(response.status).to eq(403)
+      end
+
+      it "stays 403 once anonymous read access is on: a user list is never public" do
+        SiteSetting.collection_allow_anonymous = true
+
+        get "/collections/#{collection.id}/subscribers.json"
+
+        expect(response.status).to eq(403)
       end
     end
 
@@ -1541,7 +1549,7 @@ RSpec.describe DiscourseCollection::CollectionsController do
         )
       end
 
-      it "orders oldest subscription first and paginates" do
+      it "orders the most recent subscription first and paginates" do
         # Fresh collection with two distinct subscribers (collection from `let` already holds
         # user's row, so build a separate one to avoid the composite PK).
         paged_collection = build_collection(name: "Paged", owner: other_user)
@@ -1553,7 +1561,7 @@ RSpec.describe DiscourseCollection::CollectionsController do
 
         expect(response.status).to eq(200)
         payload = response.parsed_body
-        expect(payload["subscribers"].length).to eq(1)
+        expect(payload["subscribers"].map { |sub| sub["id"] }).to eq([stranger.id])
         expect(payload["meta"]["total"]).to eq(2)
         expect(payload["meta"]["more"]).to eq(true)
       end
@@ -1562,6 +1570,69 @@ RSpec.describe DiscourseCollection::CollectionsController do
         get "/collections/999999/subscribers.json"
 
         expect(response.status).to eq(404)
+      end
+    end
+
+    # docs/02 §5: login gets the caller in the door, then collection_subscribers_visibility
+    # decides whether the roster opens to them. Which roles each level admits is covered by
+    # the policy spec; what is checked here is the wiring — that the endpoint asks at all,
+    # and asks about THIS collection.
+    context "when collection_subscribers_visibility narrows the list" do
+      it "turns away a signed-in user the level does not admit" do
+        SiteSetting.collection_subscribers_visibility = "admin"
+        sign_in(user)
+
+        get "/collections/#{collection.id}/subscribers.json"
+
+        expect(response.status).to eq(403)
+      end
+
+      it "turns away the collection's own owner below the level that names them" do
+        SiteSetting.collection_subscribers_visibility = "admin"
+        sign_in(other_user)
+
+        get "/collections/#{collection.id}/subscribers.json"
+
+        expect(response.status).to eq(403)
+      end
+
+      it "admits the owner at staff_owner" do
+        SiteSetting.collection_subscribers_visibility = "staff_owner"
+        sign_in(other_user)
+
+        get "/collections/#{collection.id}/subscribers.json"
+
+        expect(response.status).to eq(200)
+      end
+
+      it "keeps a co-maintainer out at staff_owner" do
+        SiteSetting.collection_subscribers_visibility = "staff_owner"
+        add_co_worker(collection, user)
+        sign_in(user)
+
+        get "/collections/#{collection.id}/subscribers.json"
+
+        expect(response.status).to eq(403)
+      end
+
+      it "admits a co-maintainer at staff_owner_teamworker" do
+        SiteSetting.collection_subscribers_visibility = "staff_owner_teamworker"
+        add_co_worker(collection, user)
+        sign_in(user)
+
+        get "/collections/#{collection.id}/subscribers.json"
+
+        expect(response.status).to eq(200)
+      end
+
+      it "admits a moderator at staff even with the management setting off" do
+        SiteSetting.collection_subscribers_visibility = "staff"
+        SiteSetting.collection_moderators_can_manage_collections = false
+        sign_in(moderator)
+
+        get "/collections/#{collection.id}/subscribers.json"
+
+        expect(response.status).to eq(200)
       end
     end
   end
