@@ -1,18 +1,31 @@
+import { cached } from "@glimmer/tracking";
 import { apiInitializer } from "discourse/lib/api";
-import Collection from "../components/result-types/collection";
+import { withCollectionColumns } from "../lib/data-explorer-columns";
 
-// Data Explorer maps a relation type to its cell component in a module-private lookup,
-// so the `collection` type this plugin registers server-side would land on the text
-// fallback — an empty cell — without a component of its own. The definitions are handed
-// to each row from one getter, which is the only place the mapping can be reached.
 export default apiInitializer((api) => {
   api.modifyClass("component:query-result", (SuperClass) =>
     class extends SuperClass {
+      @cached
       get columnComponents() {
-        return super.columnComponents.map((definition) =>
-          definition.name === "collection"
-            ? { ...definition, component: Collection }
-            : definition
+        return withCollectionColumns(
+          super.columnComponents,
+          this.colRender,
+          this._relationTables
+        );
+      }
+    }
+  );
+
+  // The admin dashboard's embedded reports render rows through the same
+  // `query-row-content`, but build their definitions from a narrowed component set.
+  api.modifyClass("component:admin-dashboard-card", (SuperClass) =>
+    class extends SuperClass {
+      @cached
+      get columnComponents() {
+        return withCollectionColumns(
+          super.columnComponents,
+          this.args.payload?.colrender ?? {},
+          this.relationTables
         );
       }
     }

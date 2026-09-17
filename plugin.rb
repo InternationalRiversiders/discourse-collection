@@ -2,7 +2,7 @@
 
 # name: discourse-collection
 # about: Public collections: signed-in users create topic collections, co-maintain them, feature selected replies, and subscribe to updates.
-# version: 1.3.5
+# version: 1.3.6
 # authors: 0x444858
 
 enabled_site_setting :collection_enabled
