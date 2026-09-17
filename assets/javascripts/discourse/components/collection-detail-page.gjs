@@ -290,6 +290,26 @@ export default class CollectionDetailPage extends Component {
           </div>
         {{/if}}
 
+        {{! The owner's other collections (docs/03 §4), right under the action row. Nothing
+        renders for an ownerless collection or an owner whose only collection is this one. }}
+        {{#if @controller.ownerCollections.length}}
+          <section class="collection-detail__owner-collections">
+            <h2 class="collection-detail__subheading">
+              {{this.ownerCollectionsHeading}}
+            </h2>
+
+            <CollectionChips @collections={{@controller.ownerCollections}}>
+              <button
+                type="button"
+                class="collection-chips__chip btn btn-primary"
+                {{on "click" @controller.openOwnerCollections}}
+              >
+                {{this.ownerCollectionsButtonLabel}}
+              </button>
+            </CollectionChips>
+          </section>
+        {{/if}}
+
         {{#if this.showTeam}}
           <section class="collection-detail__team">
             <h2 class="collection-detail__subheading">
@@ -364,26 +384,6 @@ export default class CollectionDetailPage extends Component {
 
         {{#if @controller.showInviteRecords}}
           <CollectionInviteRecords @controller={{@controller}} />
-        {{/if}}
-
-        {{! The owner's other collections (docs/03 §4), above the reading feed. Nothing
-        renders for an ownerless collection or an owner whose only collection is this one. }}
-        {{#if @controller.ownerCollections.length}}
-          <section class="collection-detail__owner-collections">
-            <h2 class="collection-detail__subheading">
-              {{this.ownerCollectionsHeading}}
-            </h2>
-
-            <CollectionChips @collections={{@controller.ownerCollections}}>
-              <button
-                type="button"
-                class="collection-chips__chip btn btn-primary"
-                {{on "click" @controller.openOwnerCollections}}
-              >
-                {{this.ownerCollectionsButtonLabel}}
-              </button>
-            </CollectionChips>
-          </section>
         {{/if}}
 
         <CollectionTopics @collection={{@collection}} @controller={{@controller}} />
