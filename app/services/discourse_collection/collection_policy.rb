@@ -48,6 +48,22 @@ module DiscourseCollection
       user.present? && (user.admin? || (user.moderator? && collection_moderators_can_manage?))
     end
 
+    # May issue an invitation on this collection (docs/05 §2.1), dispatched on the invite
+    # kind: type=1 (become the new owner) is the current owner transferring the collection
+    # or staff holding the management role on any collection — an ownerless one included,
+    # where it designates the first owner; type=0 (become a co-maintainer) is the current
+    # owner only (an ownerless collection has nobody to invite). Any other value dispatches
+    # as type=0, the narrower half. Both the create endpoint's idempotent early return and
+    # the service's own :can_create_invite policy ask this, so an existing invite can never
+    # be read back by a caller the rule turns away.
+    def can_create_invite?(action_type)
+      if action_type.to_s.to_i == CollectionInvite::ACTION_TYPE_OWNER
+        owner? || can_manage_collection?
+      else
+        owner?
+      end
+    end
+
     # May open this collection's subscriber list (docs/02 §5): the site setting names the
     # minimum role, and its levels are cumulative. Ownership is asked of THIS collection, so
     # the same viewer may read one collection's list and not another's. Staff here is core

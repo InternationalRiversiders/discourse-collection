@@ -12,7 +12,8 @@ module DiscourseCollection
   # unique per collection (one open ownership ticket at a time). The invite is process
   # state, not collection activity: updated_at / topic_count / last_topic_added_at are not
   # touched. Same-target-same-type idempotency is handled by the controller, which
-  # returns the live pending row with 200 before this service runs.
+  # returns the live pending row with 200 before this service runs — behind the rule
+  # below, so the early return never answers a caller who may not issue the invite.
   #
   # One case leaves that flow behind entirely (docs/05 §2.7): a staff member naming
   # THEMSELVES as the new owner. There is nobody to wait for, so the invitation and its
@@ -110,16 +111,10 @@ module DiscourseCollection
       )
     end
 
+    # The rule lives on the policy because the controller asks it too, ahead of its
+    # idempotent early return (docs/05 §2.1) — one definition, so the two cannot drift.
     def can_create_invite(collection:, guardian:, params:)
-      policy = CollectionPolicy.for(collection:, user: guardian.user)
-      if params.action_type == CollectionInvite::ACTION_TYPE_OWNER
-        # Self-transfer by the current owner, or staff on any collection (incl. an ownerless
-        # one, where this designates the first owner).
-        policy.owner? || policy.can_manage_collection?
-      else
-        # type=0: only the current owner may invite; an ownerless collection has nobody.
-        policy.owner?
-      end
+      CollectionPolicy.for(collection:, user: guardian.user).can_create_invite?(params.action_type)
     end
 
     def maintainer_invite?(params:)

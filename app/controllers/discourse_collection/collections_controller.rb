@@ -106,8 +106,16 @@ module DiscourseCollection
     # lands the ownership inside the request, so it answers 200 with the accepted invite
     # and the collection's new shape — the inviter/invitee pair being the same user is
     # what marks it (a regular invite can never be self-addressed).
+    # Both answers sit behind the permission rule (the service's own policy, asked here
+    # first): handing back the existing row is a read of it, so a caller the rule turns
+    # away is refused whether or not a row is there.
     def create_invite
       collection = find_collection(params[:id])
+      # Before the idempotent early return below, never after: a caller who may not issue
+      # this invite gets its 403 either way, so the answer cannot be read as "a pending
+      # invite for this target already exists" (docs/05 §2.1).
+      policy = CollectionPolicy.for(collection:, user: current_user)
+      raise Discourse::InvalidAccess unless policy.can_create_invite?(params[:action_type])
 
       existing =
         CollectionInvite.valid_pending.find_by(

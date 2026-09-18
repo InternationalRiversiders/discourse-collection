@@ -677,6 +677,28 @@ RSpec.describe DiscourseCollection::CollectionsController do
       expect(DiscourseCollection::CollectionInvite.where(collection_id: collection.id).count).to eq(1)
     end
 
+    # The idempotent early return answers with an existing row, so it sits behind the same
+    # permission rule as a fresh issue (docs/05 §2.1) — otherwise its 200 tells anyone that
+    # a pending invite for this target exists.
+    it "does not return an existing pending row to an outsider" do
+      Fabricate(:collection_invite, collection:, inviter: user, invitee: other_user)
+      sign_in(stranger)
+
+      post invite_url, params: { user_id: other_user.id, action_type: 0 }, as: :json
+
+      expect(response.status).to eq(403)
+    end
+
+    it "does not return an existing pending row to a co-maintainer" do
+      Fabricate(:collection_invite, collection:, inviter: user, invitee: other_user)
+      add_co_worker(collection, stranger)
+      sign_in(stranger)
+
+      post invite_url, params: { user_id: other_user.id, action_type: 0 }, as: :json
+
+      expect(response.status).to eq(403)
+    end
+
     it "rejects an outsider with 403 and an unknown target with 404" do
       sign_in(stranger)
       post invite_url, params: { user_id: other_user.id, action_type: 0 }, as: :json
