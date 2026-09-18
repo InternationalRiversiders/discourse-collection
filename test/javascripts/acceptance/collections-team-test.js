@@ -348,7 +348,15 @@ acceptance("Collections team — staff", function (needs) {
       })
     );
     server.get("/collections/14.json", () =>
-      helper.response(fullShape(14, { owner: OTHER_OWNER, teamworkers: [RIVER] }))
+      helper.response(
+        fullShape(14, {
+          owner: OTHER_OWNER,
+          teamworkers: [RIVER],
+          // Only the detail read carries these (docs/03 §1 / docs/03 §4): the page shows
+          // the sitting owner's other collections until a takeover renames the heading.
+          owner_collections: [{ id: 21, name: "Ana's other" }],
+        })
+      )
     );
     server.get("/collections/14/topics.json", () => helper.response(EMPTY_FEED));
     server.get("/collections/15.json", () =>
@@ -375,9 +383,14 @@ acceptance("Collections team — staff", function (needs) {
           created_at: "2026-01-02T03:04:05.000Z",
           expires_at: "2026-01-12T03:04:05.000Z",
         },
+        // The landing shape (docs/05 §2.7): the viewer owns it, the demoted owner stays
+        // on as a co-maintainer, the viewer's auto-subscription never counts while the
+        // demoted owner's own row starts to (docs/08 §1).
         collection: fullShape(14, {
           owner: VIEWER,
           teamworkers: [OTHER_OWNER, RIVER],
+          is_subscribed: true,
+          subscriber_count: 6,
         }),
       });
     });
@@ -440,6 +453,9 @@ acceptance("Collections team — staff", function (needs) {
   test("takes the collection over when they pick themselves", async function (assert) {
     await visit("/collections/14");
     await settled();
+    assert
+      .dom(".collection-detail__owner-collections")
+      .containsText("Ana's other", "the page starts on the sitting owner's other collections");
     await click(".collection-detail__invite-owner");
 
     await selectInvitee(assert, "evil", "eviltrout");
@@ -467,6 +483,18 @@ acceptance("Collections team — staff", function (needs) {
       .hasText(i18n("collections.owner_badge"));
     assert.dom(".collection-detail__delete").exists();
     assert.dom(".collection-detail__invite-maintainer").exists();
+
+    // The subscription came with the role, and the count is the one the server recomputed.
+    assert
+      .dom(".collection-detail__subscribe")
+      .containsText(i18n("collections.detail.unsubscribe"), "the new owner is subscribed");
+    assert
+      .dom(".collection-detail__stat:nth-child(2) dd")
+      .hasText("6", "the count follows the response");
+    // The list belonged to the previous owner, so it leaves with the role.
+    assert
+      .dom(".collection-detail__owner-collections")
+      .doesNotExist("the previous owner's other collections go with the role");
   });
 
   test("may designate a first owner for an unclaimed collection", async function (assert) {

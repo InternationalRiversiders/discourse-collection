@@ -572,12 +572,23 @@ export default class CollectionsShowController extends Controller {
   }
 
   // docs/05 §2.7 — a staff takeover answers with the collection already under its new owner,
-  // so the page mirrors the two team fields it renders instead of re-reading it: the
-  // role chip, the team card and every entry gate on the page follow from them.
+  // so the page mirrors the fields it renders instead of re-reading it: the role chip, the
+  // team card and every entry gate on the page follow from them.
   @action
   applyOwnership(collection) {
     this.owner = collection.owner;
     this.teamworkers = collection.teamworkers;
+    // The subscription moves with the role (docs/08 §1): the incoming owner holds a
+    // subscription row that never counts, while the demoted owner's own row starts
+    // counting, so the response's recomputed count is the only correct one here.
+    this.isSubscribed = collection.is_subscribed;
+    this.subscriberCount = collection.subscriber_count;
+    // The response is the full shape, but the owner's other collections are only added by
+    // docs/03 §4's detail read (docs/03 §1) — and this page shows rather than re-reads.
+    // They belonged to the previous owner, so they are dropped along with the heading
+    // that has just been renamed.
+    this.ownerCollections = [];
+    this.hasMoreOwnerCollections = false;
     // Taking over both adds a record and, for staff, gains the record section — the
     // viewer is an owner now.
     this.loadInvites();
