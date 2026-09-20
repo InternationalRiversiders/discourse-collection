@@ -7,13 +7,21 @@ module Jobs
     # collect: the run is judged against the collect that opened it, never against the
     # collection as it stands when the run fires.
     #
-    # A run *refreshes* the subscriber's notification for this collection rather than
-    # appending another one. The notification carries no topic_id, so its identity is the
-    # (user_id, data->>'collection_id') pair: a subscriber who already holds a row has it
-    # rewritten — album name re-read, marked unread, moved to the top — and only a
-    # subscriber without one gets a new row. Two runs racing on the same pair can therefore
-    # leave two rows, which the collection's next collect collapses down to the highest id,
-    # so repeated collects converge on one row per subscriber instead of piling up.
+    # A run *replaces* the subscriber's notification for this collection rather than
+    # appending another one: the rows this run's recipients already hold are deleted, and
+    # one fresh row each is inserted, in a single transaction. The fresh row is what makes
+    # the replacement visible — a notification counts as news only while its id is above
+    # User#seen_notification_id, which is pushed up to the newest notification id every
+    # time the user menu loads (NotificationsController#index →
+    # User#bump_last_seen_notification!). User#unread_notifications and the header badge
+    # User#all_unread_notifications_count both read that mark, so an id the subscriber has
+    # already seen can never move either of them.
+    #
+    # One transaction rather than delete-then-insert, because a run interrupted between the
+    # two would leave those subscribers with no notification at all: the invariant this job
+    # keeps is "at least one", never zero. Two runs racing can still leave two rows (each
+    # deletes only the ids its own snapshot saw); that is the harmless direction, and the
+    # collection's next collect collapses it.
     #
     # Recipients are resolved live, as the run fires, rather than snapshotted at collect
     # time: the collection's subscriber rows minus the collecting user (never told about
@@ -29,7 +37,8 @@ module Jobs
     # are the reading page's own (docs/04 §1): a deleted topic notifies nobody, an unlisted
     # one is kept for the recipients that page would list it to (staff and TL4 — the same
     # guardian.can_see_unlisted_topics? it filters with), and everything else is the
-    # recipient's own Guardian rather than a second statement of its rules.
+    # recipient's own Guardian rather than a second statement of its rules. A subscriber the
+    # run filters out keeps the row they already held, untouched.
     #
     # The notification carries no topic, so the destination is always the collection page.
     # data holds locators only: display_username (the slot the core renders as the first
@@ -52,40 +61,54 @@ module Jobs
 
         data = { display_username: collection.name, collection_id: collection.id }.to_json
 
-        existing = existing_notifications(collection.id, recipient_ids)
-        refreshing_ids = existing.map(&:last).uniq
-        keep_ids, extra_ids = survivors(existing)
-        fresh_ids = recipient_ids - refreshing_ids
+        inserted_ids = replace(collection.id, recipient_ids, data)
 
-        if keep_ids.present?
-          refresh(keep_ids, extra_ids, data)
+        # insert_all! and delete_all both bypass the model callbacks, and one of them is
+        # where the live notification state is published from
+        # (Notification#refresh_notification_count, after_commit), so every recipient is
+        # pushed here.
+        ::User.where(id: recipient_ids).find_each(&:publish_notifications_state)
 
-          # update_all and delete_all both bypass the model callbacks, and one of them is
-          # where the live notification state is published from
-          # (Notification#refresh_notification_count, after_commit). Left to itself, a
-          # recipient whose row was refreshed would keep a stale badge, so push for them
-          # here — the payload is computed on read, so it also covers the unread count the
-          # collapse just lowered.
-          ::User.where(id: refreshing_ids).find_each(&:publish_notifications_state)
-        end
-
-        # BulkCreate is the one path that pushes for the recipients it inserts; it is run
-        # after the transaction above so that its push lands after the commit.
-        return if fresh_ids.empty?
-
-        ::Notification::Action::BulkCreate.call(
-          records:
-            fresh_ids.map do |user_id|
-              { user_id: user_id, notification_type: notification_type, data: data }
-            end,
-          skip_send_email: true,
-        )
+        notify_created(inserted_ids)
       end
 
       private
 
       def notification_type
         ::Notification.types[:collection_topic_added]
+      end
+
+      # One transaction: the rows this batch already held go, one fresh row per recipient
+      # comes in. Returns the inserted ids for the :notification_created replay below.
+      def replace(collection_id, recipient_ids, data)
+        stale_ids = stale_notification_ids(collection_id, recipient_ids)
+
+        ::Notification.transaction do
+          ::Notification.where(id: stale_ids).delete_all if stale_ids.present?
+
+          ::Notification.insert_all!(rows(recipient_ids, data), returning: %i[id]).rows.flatten
+        end
+      end
+
+      # The row a collect hands a recipient. topic_id / post_number stay NULL by omission —
+      # their absence is the point of the type (docs/09 §1): it keeps core's per-topic read
+      # and cleanup paths off these rows. high_priority is computed the way core computes it
+      # for its own bulk inserts.
+      def rows(recipient_ids, data)
+        now = Time.zone.now
+        high_priority = ::Notification.high_priority_types.include?(notification_type)
+
+        recipient_ids.map do |user_id|
+          {
+            user_id: user_id,
+            notification_type: notification_type,
+            data: data,
+            read: false,
+            high_priority: high_priority,
+            created_at: now,
+            updated_at: now,
+          }
+        end
       end
 
       def resolve_recipients(collection, topic, actor_user_id)
@@ -149,52 +172,29 @@ module Jobs
           topic.deleted_at.nil? && !topic.shared_draft? && !topic.private_message?
       end
 
-      # The rows these recipients already hold for this collection. Read by user_id and
-      # filtered on the collection_id inside data — the only index reaching them is
-      # (user_id, created_at), since a row that is already read is exactly the one to
-      # refresh rather than replace and so the query cannot carry the unread-only
-      # predicate core's partial index is built on.
-      def existing_notifications(collection_id, recipient_ids)
+      # The rows this run's recipients already hold for this collection, read or not — all
+      # of them are being replaced. Read by user_id and filtered on the collection_id inside
+      # data: the only index reaching them is (user_id, created_at), because the query
+      # cannot carry the unread-only predicate core's partial index is built on.
+      def stale_notification_ids(collection_id, recipient_ids)
         ::Notification
           .where(user_id: recipient_ids, notification_type: notification_type)
           .where("data::jsonb ->> 'collection_id' = ?", collection_id.to_s)
-          .pluck(:id, :user_id)
+          .pluck(:id)
       end
 
-      # Splits the rows a recipient holds into the one to keep — the highest id — and the
-      # duplicates to drop. A run drops only rows its own snapshot saw and keeps the highest
-      # of them itself, so however two overlapping runs interleave, the newest row either of
-      # them saw is kept: the pair can never come out of a collapse empty.
-      def survivors(existing)
-        keep_ids = []
-        extra_ids = []
+      # The event a core create fires from its own after_commit (app/models/notification.rb).
+      # This job inserts its rows itself, so it replays it by hand — after the commit, like
+      # the push above.
+      def notify_created(inserted_ids)
+        return if inserted_ids.empty?
 
-        existing.group_by(&:last).each_value do |rows|
-          ids = rows.map(&:first).sort
-          keep_ids << ids.pop
-          extra_ids.concat(ids)
-        end
-
-        [keep_ids, extra_ids]
-      end
-
-      # Collapses the duplicates and refreshes the survivors in one transaction. created_at
-      # is set explicitly: every notification list orders on it (the full page by
-      # created_at desc, the user menu within each block), so a refresh that left it alone
-      # would not move the notification back to the top where a new one would have landed.
-      def refresh(keep_ids, extra_ids, data)
-        now = Time.zone.now
-
-        ::Notification.transaction do
-          ::Notification.where(id: extra_ids).delete_all if extra_ids.present?
-
-          ::Notification.where(id: keep_ids).update_all(
-            data: data,
-            read: false,
-            created_at: now,
-            updated_at: now,
-          )
-        end
+        ::Notification
+          .where(id: inserted_ids)
+          .includes(:user)
+          .find_each do |notification|
+            ::DiscourseEvent.trigger(:notification_created, notification)
+          end
       end
     end
   end

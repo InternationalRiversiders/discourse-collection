@@ -23,7 +23,7 @@ RSpec.describe Jobs::DiscourseCollection::NotifyTopicAdded do
   end
   subject(:run_job) { described_class.new.execute(**job_args) }
 
-  # A row the way a previous run would have left it — no topic_id, the two locator keys only.
+  # A row a previous run would have left — no topic_id, the two locator keys only.
   def stored_notification(user, collection: self.collection, at: nil, read: false)
     now = at || Time.zone.now
 
@@ -70,19 +70,21 @@ RSpec.describe Jobs::DiscourseCollection::NotifyTopicAdded do
   context "when a subscriber already holds a notification for this collection" do
     let!(:existing) { stored_notification(subscriber2, at: 3.days.ago, read: true) }
 
-    it "reuses that row instead of adding another one" do
+    it "replaces that row with a new one instead of appending another" do
       expect { run_job }.to change { Notification.count }.by(1)
 
-      expect(notifications_for(subscriber2).pluck(:id)).to eq([existing.id])
+      expect(Notification.exists?(existing.id)).to eq(false)
+      expect(notifications_for(subscriber2).pluck(:id).size).to eq(1)
       expect(notifications_for(subscriber1).count).to eq(1)
     end
 
-    it "moves the row back to the top and marks it unread again" do
+    it "hands the replacement an id above the row it replaces and marks it unread" do
       run_job
 
-      refreshed = existing.reload
-      expect(refreshed.read).to eq(false)
-      expect(refreshed.created_at).to be_within(1.second).of(Time.zone.now)
+      replacement = notifications_for(subscriber2).first
+      expect(replacement.id).to be > existing.id
+      expect(replacement.read).to eq(false)
+      expect(replacement.created_at).to be_within(1.second).of(Time.zone.now)
     end
 
     it "re-reads the collection name into the first line" do
@@ -90,17 +92,20 @@ RSpec.describe Jobs::DiscourseCollection::NotifyTopicAdded do
 
       run_job
 
-      expect(JSON.parse(existing.reload.data)["display_username"]).to eq("Renamed collection")
+      expect(JSON.parse(notifications_for(subscriber2).first.data)["display_username"]).to eq(
+        "Renamed collection",
+      )
     end
 
     context "when the subscriber holds more than one row for this collection" do
       let!(:newer) { stored_notification(subscriber2) }
 
-      it "keeps the highest id and drops the duplicates" do
-        # Net zero: the duplicate goes (−1), subscriber1 gains a row (+1).
-        expect { run_job }.to change { Notification.count }.by(0)
+      it "replaces them all with a single row" do
+        run_job
 
-        expect(notifications_for(subscriber2).pluck(:id)).to eq([newer.id])
+        expect(notifications_for(subscriber2).count).to eq(1)
+        expect(Notification.exists?(existing.id)).to eq(false)
+        expect(Notification.exists?(newer.id)).to eq(false)
       end
 
       it "leaves the duplicates of another collection alone" do
@@ -114,21 +119,48 @@ RSpec.describe Jobs::DiscourseCollection::NotifyTopicAdded do
     end
   end
 
-  context "when a subscriber's row was refreshed" do
+  # The badge (User#all_unread_notifications_count) and User#unread_notifications count only
+  # rows with id > seen_notification_id, a mark pushed up to the newest notification id when
+  # the user menu loads (NotificationsController#index → User#bump_last_seen_notification!).
+  context "when the subscriber's existing row sits behind their seen_notification_id" do
+    let!(:seen) { stored_notification(subscriber2, at: 3.days.ago, read: true) }
+
+    before { subscriber2.update!(seen_notification_id: seen.id) }
+
+    # Counts are memoized per User instance, so read them off a freshly loaded one.
+    def counters(user)
+      fresh = User.find(user.id)
+      [fresh.unread_notifications, fresh.all_unread_notifications_count]
+    end
+
+    it "hands the replacement an id above the seen mark" do
+      run_job
+
+      expect(notifications_for(subscriber2).first.id).to be > seen.id
+    end
+
+    it "moves the unread counters that light the badge" do
+      expect(counters(subscriber2)).to eq([0, 0])
+
+      run_job
+
+      expect(counters(subscriber2)).to eq([1, 1])
+    end
+  end
+
+  context "when a subscriber's row was replaced" do
     before { stored_notification(subscriber2, at: 3.days.ago) }
 
-    # update_all bypasses the callbacks the live notification state is published from.
-    it "pushes the refreshed subscriber's state" do
-      messages =
-        MessageBus.track_publish("/notification/#{subscriber2.id}") { run_job }
+    # insert_all! and delete_all bypass the callbacks the live notification state is
+    # published from.
+    it "pushes the subscriber whose row was replaced" do
+      messages = MessageBus.track_publish("/notification/#{subscriber2.id}") { run_job }
 
       expect(messages.size).to eq(1)
     end
 
-    # BulkCreate publishes for the rows it inserts, so the job must not push for them too.
-    it "leaves the push for a new row to BulkCreate, exactly once" do
-      messages =
-        MessageBus.track_publish("/notification/#{subscriber1.id}") { run_job }
+    it "pushes a subscriber who held no row exactly once" do
+      messages = MessageBus.track_publish("/notification/#{subscriber1.id}") { run_job }
 
       expect(messages.size).to eq(1)
     end
@@ -204,7 +236,7 @@ RSpec.describe Jobs::DiscourseCollection::NotifyTopicAdded do
         expect(notifications_for(subscriber2).count).to eq(0)
       end
 
-      it "neither floats nor unreads the existing row of a subscriber who may not" do
+      it "leaves the existing row of a subscriber who may not see it untouched" do
         existing = stored_notification(subscriber2, at: 3.days.ago, read: true)
 
         run_job
@@ -234,7 +266,7 @@ RSpec.describe Jobs::DiscourseCollection::NotifyTopicAdded do
       expect { run_job }.not_to change { Notification.count }
     end
 
-    it "neither floats nor unreads the existing row of a subscriber who may not list it" do
+    it "leaves the existing row of a subscriber who may not list it untouched" do
       existing = stored_notification(subscriber2, at: 3.days.ago, read: true)
 
       run_job
@@ -305,9 +337,8 @@ RSpec.describe Jobs::DiscourseCollection::NotifyTopicAdded do
     end
   end
 
-  # None of this plugin's four types mails: the new rows are handed to BulkCreate with
-  # skip_send_email rather than leaning on core having no EmailUser method named after the
-  # type.
+  # None of this plugin's four types mails: the rows are inserted with insert_all! and the
+  # invitation jobs pass skip_send_email.
   it "processes no email" do
     NotificationEmailer.expects(:process_notification).never
 
