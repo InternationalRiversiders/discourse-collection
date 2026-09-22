@@ -1352,12 +1352,12 @@
     color: var(--primary-medium);
   }
 
+  // One line only: the collection's creation date. The card carries no "updated" date,
+  // because the card is a bake-time snapshot and that field keeps moving (docs/12 §5).
   &__times {
     grid-area: times;
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
+    align-items: center;
   }
 
   &__activity {
@@ -1369,10 +1369,6 @@
     .d-icon {
       flex: none;
     }
-
-    &.-none {
-      font-style: italic;
-    }
   }
 
   @media screen and (min-width: 768px) {
@@ -1382,11 +1378,6 @@
         "times times";
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 0.5rem 1rem;
-    }
-
-    &__times {
-      flex-direction: row;
-      justify-content: space-between;
     }
   }
 }

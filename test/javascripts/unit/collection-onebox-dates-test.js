@@ -61,7 +61,7 @@ module("Unit | Lib | collection-onebox-dates", function () {
     );
   });
 
-  test("rewrites every date a card carries, each on its own side of the cutoff", function (assert) {
+  test("rewrites every date it is given, each on its own side of the cutoff", function (assert) {
     const createdAt = ago(3 * HOUR);
     const lastAddedAt = ago(30 * DAY);
     const root = document.createElement("div");

@@ -96,35 +96,37 @@ RSpec.describe DiscourseCollection::OneboxHandler do
       expect(card(collection)).to match(%r{<use href="#user-group"></use></svg>\s*2\s*</span>})
     end
 
-    # The browser re-renders these from `data-time` (docs/12 §5), and core's own ticker
-    # only knows how to shorten them past five days — the plugin's initializer needs the
-    # elements to itself.
-    it "stamps the dates for the browser, and words the fallback in UTC" do
+    # The browser re-renders this from `data-time` (docs/12 §5), and core's own ticker
+    # only knows how to shorten dates past five days — the plugin's initializer needs the
+    # element to itself.
+    it "stamps the creation date for the browser, and words the fallback in UTC" do
       collection = build_collection
-      collection.update!(topic_count: 1, last_topic_added_at: Time.zone.now)
-      collection.reload
 
       html = card(collection)
 
-      expect(html).to include(%(data-time="#{(collection.created_at.to_f * 1000).to_i}"))
       expect(html).to include(
-        %(<span class="collection-onebox__date" data-time="#{(collection.last_topic_added_at.to_f * 1000).to_i}">),
+        %(<span class="collection-onebox__date" data-time="#{(collection.created_at.to_f * 1000).to_i}">),
       )
       expect(html).not_to include("relative-date")
       # What a mail digest, or a reader without JavaScript, sees. Baking happens in the
       # server's zone, so the text carries the marker.
       expect(html).to include("#{I18n.l(collection.created_at, format: :long)} UTC")
       expect(html).to include("Created")
-      expect(html).to include("Updated")
     end
 
-    it "falls back to the empty-collection wording when nothing is collected yet" do
+    # The card is a snapshot taken while cooking — it is never revisited — so a time that
+    # keeps moving would turn into a false claim the moment the collection is next
+    # updated. `created_at` is the one timestamp that cannot (docs/12 §5).
+    it "carries no timestamp that moves after the card is baked" do
       collection = build_collection
+      collection.update!(topic_count: 1, last_topic_added_at: Time.zone.now)
+      collection.reload
 
-      expect(collection.last_topic_added_at).to be_nil
-      expect(card(collection)).to include(
-        %(<span class="collection-onebox__activity -none">No topics yet</span>),
-      )
+      html = card(collection)
+
+      expect(html.scan("collection-onebox__date").size).to eq(1)
+      expect(html).not_to include("Updated")
+      expect(html).not_to include("No topics yet")
     end
 
     it "escapes what the collection carries" do

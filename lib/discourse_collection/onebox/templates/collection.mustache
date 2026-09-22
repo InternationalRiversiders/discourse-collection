@@ -46,16 +46,6 @@
         {{labels.created_at}}
         <span class="collection-onebox__date" data-time="{{created_at_ms}}">{{created_at_text}}</span>
       </span>
-      {{#has_topics}}
-        <span class="collection-onebox__activity">
-          <svg class="fa d-icon d-icon-clock svg-icon svg-string" xmlns="http://www.w3.org/2000/svg"><use href="#clock"></use></svg>
-          {{labels.last_topic_added_at}}
-          <span class="collection-onebox__date" data-time="{{last_topic_added_at_ms}}">{{last_topic_added_at_text}}</span>
-        </span>
-      {{/has_topics}}
-      {{^has_topics}}
-        <span class="collection-onebox__activity -none">{{labels.no_topics_yet}}</span>
-      {{/has_topics}}
     </div>
   </div>
 </aside>

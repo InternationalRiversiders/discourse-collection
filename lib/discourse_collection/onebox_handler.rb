@@ -81,9 +81,14 @@ module DiscourseCollection
 
       # Flat, like core's own onebox templates: a section pushing a hash onto the context
       # is one more thing the template has to get right for no gain here.
+      #
+      # Only `created_at` is stamped out of the collection's two times. The other one,
+      # `last_topic_added_at`, moves whenever a topic is collected, and the card is baked
+      # into posts.cooked once and then never revisited: it would read "updated a year
+      # ago" for a collection updated this morning. The counts beside it do drift too, but
+      # a date is a claim about *when*, and a stale one reads as an abandoned collection
+      # rather than as an approximate count (docs/12 §5).
       def card_args(url, collection)
-        last_added_at = collection.last_topic_added_at
-
         {
           url: url,
           name: collection.name,
@@ -94,9 +99,6 @@ module DiscourseCollection
           owner: owner_args(collection),
           created_at_ms: time_ms(collection.created_at),
           created_at_text: absolute_date(collection.created_at),
-          has_topics: last_added_at.present?,
-          last_topic_added_at_ms: last_added_at && time_ms(last_added_at),
-          last_topic_added_at_text: last_added_at && absolute_date(last_added_at),
           labels: labels,
         }
       end
@@ -119,8 +121,8 @@ module DiscourseCollection
         }
       end
 
-      # The browser rewrites these from `data-time` on render (the plugin's own
-      # initializer, docs/12 §5), so they only have to be right at bake time.
+      # The browser rewrites this from `data-time` on render (the plugin's own initializer,
+      # docs/12 §5), so it only has to be right at bake time.
       def time_ms(time)
         (time.to_f * 1000).to_i
       end
@@ -135,8 +137,6 @@ module DiscourseCollection
       def labels
         {
           created_at: I18n.t("discourse_collection.onebox.created_at"),
-          last_topic_added_at: I18n.t("discourse_collection.onebox.last_topic_added_at"),
-          no_topics_yet: I18n.t("discourse_collection.onebox.no_topics_yet"),
           no_owner: I18n.t("discourse_collection.onebox.no_owner"),
           topic_count: I18n.t("discourse_collection.onebox.stats.topic_count"),
           subscriber_count: I18n.t("discourse_collection.onebox.stats.subscriber_count"),

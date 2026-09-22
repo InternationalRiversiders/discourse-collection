@@ -34,9 +34,7 @@ en:
     onebox:
       inline_title: "%{name} - Collections"
       created_at: "Created"
-      last_topic_added_at: "Updated"
       utc_time: "%{time} UTC"
-      no_topics_yet: "No topics yet"
       no_owner: "Unclaimed"
       stats:
         topic_count: "Topics"
