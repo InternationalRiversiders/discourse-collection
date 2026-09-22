@@ -1,4 +1,4 @@
-import { click, currentURL, settled, visit } from "@ember/test-helpers";
+import { click, currentURL, visit } from "@ember/test-helpers";
 import { test } from "qunit";
 import { cloneJSON } from "discourse/lib/object";
 import userFixtures from "discourse/tests/fixtures/user-fixtures";
@@ -11,7 +11,12 @@ function collectionTile(id, overrides = {}) {
     name: `Collection ${id}`,
     description: `Description ${id}`,
     topic_count: 1,
-    owner: { id: 100 + id, username: "river", name: "River", avatar_template: "/user_avatar/test/river/{size}/1.png" },
+    owner: {
+      id: 100 + id,
+      username: "river",
+      name: "River",
+      avatar_template: "/user_avatar/test/river/{size}/1.png",
+    },
     teamworker_count: 0,
     subscriber_count: 2,
     is_teamworker: false,
@@ -31,7 +36,10 @@ function listResponse(collections) {
 }
 
 function emptyTopics() {
-  return { topics: [], meta: { page: 0, page_size: 30, more: false, total: 0 } };
+  return {
+    topics: [],
+    meta: { page: 0, page_size: 30, more: false, total: 0 },
+  };
 }
 
 acceptance("Collections list", function (needs) {
@@ -45,7 +53,14 @@ acceptance("Collections list", function (needs) {
       helper.response(
         listResponse([
           collectionTile(1, { name: "Riverside gems", teamworker_count: 2 }),
-          collectionTile(2, { name: "Unclaimed box", owner: null, description: "", topic_count: 0, subscriber_count: 0, last_topic_added_at: null }),
+          collectionTile(2, {
+            name: "Unclaimed box",
+            owner: null,
+            description: "",
+            topic_count: 0,
+            subscriber_count: 0,
+            last_topic_added_at: null,
+          }),
         ])
       )
     );
@@ -59,7 +74,9 @@ acceptance("Collections list", function (needs) {
     );
     // The detail page loads the reading feed (docs/04 §1) for any opened collection, and
     // the invitation record (docs/05 §2.3) for a viewer who may read it.
-    server.get("/collections/:id/topics.json", () => helper.response(emptyTopics()));
+    server.get("/collections/:id/topics.json", () =>
+      helper.response(emptyTopics())
+    );
     server.get("/collections/:id/invites.json", () =>
       helper.response({
         invites: [],
@@ -103,9 +120,10 @@ acceptance("Collections list", function (needs) {
     );
 
     await click(owner);
-    await settled();
 
-    assert.dom(".user-card .card-content").exists("the owner link opens the card");
+    assert
+      .dom(".user-card .card-content")
+      .exists("the owner link opens the card");
     assert.strictEqual(
       currentURL(),
       "/collections",
@@ -135,7 +153,7 @@ acceptance("Collections list", function (needs) {
     assert.dom(".collection-role-hint").doesNotExist();
   });
 
-  test("shows topic, subscriber and maintainer counts plus both timestamps", async function (assert) {
+  test("shows counts and only the timestamp matching the selected sort", async function (assert) {
     await visit("/collections");
 
     assert
@@ -147,13 +165,38 @@ acceptance("Collections list", function (needs) {
       .exists();
     assert
       .dom(".collection-tile:first-child .collection-tile__activity")
-      .exists({ count: 2 });
-    // Both stamps are asked of their shared footer: split over two spans, they would
-    // otherwise be read one at a time, and only the first would ever answer.
+      .exists(
+        { count: 1 },
+        "one timestamp for the default recent-collection sort"
+      )
+      .hasAttribute("title", i18n("collections.tile.last_topic_added_at"));
     assert
-      .dom(".collection-tile:first-child .collection-tile__footer")
-      .includesText(i18n("collections.tile.created_at"))
-      .includesText(i18n("collections.tile.last_topic_added_at"));
+      .dom(
+        ".collection-tile:first-child .collection-tile__activity .d-icon-clock"
+      )
+      .exists("the update time is identified by an icon");
+    assert
+      .dom(".collection-tile:nth-child(2) .collection-tile__activity")
+      .includesText(
+        i18n("collections.no_topics_yet"),
+        "no invented update date for an empty collection"
+      );
+
+    await visit("/collections?sort=created_at");
+    assert
+      .dom(".collection-tile:first-child .collection-tile__activity")
+      .exists({ count: 1 }, "creation sort shows one date")
+      .hasAttribute("title", i18n("collections.tile.created_at"));
+    assert
+      .dom(
+        ".collection-tile:first-child .collection-tile__activity .d-icon-plus"
+      )
+      .exists("the creation time uses its own icon");
+
+    await visit("/collections?sort=topic_count");
+    assert
+      .dom(".collection-tile__activity")
+      .doesNotExist("count-based sort does not show either date");
   });
 
   test("marks an ownerless collection as unclaimed", async function (assert) {
@@ -193,7 +236,9 @@ acceptance("Collections list anonymous, guest reading on", function (needs) {
   needs.pretender((server, helper) => {
     server.get("/collections.json", () =>
       helper.response(
-        listResponse([collectionTile(2, { name: "Unclaimed box", owner: null })])
+        listResponse([
+          collectionTile(2, { name: "Unclaimed box", owner: null }),
+        ])
       )
     );
   });
@@ -206,7 +251,9 @@ acceptance("Collections list anonymous, guest reading on", function (needs) {
     // `owner?.id === currentUser?.id` would compare undefined with undefined and
     // hand the guest the owner chip.
     assert.dom(".collection-tile__role").doesNotExist();
-    assert.dom(".collection-list__tab").exists({ count: 1 }, "only the public tab");
+    assert
+      .dom(".collection-list__tab")
+      .exists({ count: 1 }, "only the public tab");
   });
 });
 

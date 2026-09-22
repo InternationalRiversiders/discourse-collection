@@ -1,13 +1,13 @@
 import Component from "@glimmer/component";
+import DConditionalLoadingSpinner from "discourse/ui-kit/d-conditional-loading-spinner";
+import DEmptyState from "discourse/ui-kit/d-empty-state";
+import DLoadMore from "discourse/ui-kit/d-load-more";
 import { i18n } from "discourse-i18n";
 import CollectionCreateButton from "./collection-create-button";
 import CollectionRoleHint from "./collection-role-hint";
 import CollectionSortBar from "./collection-sort-bar";
 import CollectionTabs from "./collection-tabs";
 import CollectionTile from "./collection-tile";
-import DConditionalLoadingSpinner from "discourse/ui-kit/d-conditional-loading-spinner";
-import DEmptyState from "discourse/ui-kit/d-empty-state";
-import DLoadMore from "discourse/ui-kit/d-load-more";
 
 export default class CollectionListPage extends Component {
   get showCreate() {
@@ -83,13 +83,16 @@ export default class CollectionListPage extends Component {
           {{#if @controller.collections.length}}
             <div class="collection-list__grid">
               {{#each @controller.collections as |collection|}}
-                <CollectionTile @collection={{collection}} />
+                <CollectionTile
+                  @collection={{collection}}
+                  @sort={{@controller.sort}}
+                />
               {{/each}}
             </div>
           {{else}}
             <DEmptyState
-              @title={{i18n @emptyTitleKey username=@username}}
               @body={{i18n @emptyBodyKey username=@username}}
+              @title={{i18n @emptyTitleKey username=@username}}
             />
           {{/if}}
         </DLoadMore>

@@ -1,7 +1,7 @@
+import Component from "@glimmer/component";
 import { on } from "@ember/modifier";
 import { action } from "@ember/object";
 import { service } from "@ember/service";
-import Component from "@glimmer/component";
 import getURL from "discourse/lib/get-url";
 import { wantsNewWindow } from "discourse/lib/intercept-click";
 import DUserLink from "discourse/ui-kit/d-user-link";
@@ -20,6 +20,25 @@ export default class CollectionTile extends Component {
     return this.args.collection;
   }
 
+  get activity() {
+    const sort = this.args.sort ?? "last_topic_added_at";
+    if (sort === "created_at") {
+      return {
+        at: this.collection.created_at,
+        icon: "plus",
+        label: i18n("collections.tile.created_at"),
+      };
+    }
+    if (sort === "last_topic_added_at") {
+      return {
+        at: this.collection.last_topic_added_at,
+        icon: "clock",
+        label: i18n("collections.tile.last_topic_added_at"),
+      };
+    }
+    return null;
+  }
+
   // The tile is a plain anchor, not a LinkTo, so it needs its own href.
   get href() {
     return getURL(`/collections/${this.collection.id}`);
@@ -29,7 +48,9 @@ export default class CollectionTile extends Component {
   // looking at an UNCLAIMED collection would otherwise compare undefined with
   // undefined and be handed the owner chip.
   get isOwner() {
-    return !!this.currentUser && this.collection.owner?.id === this.currentUser.id;
+    return (
+      !!this.currentUser && this.collection.owner?.id === this.currentUser.id
+    );
   }
 
   get roleLabel() {
@@ -70,10 +91,16 @@ export default class CollectionTile extends Component {
     <a
       class="collection-tile"
       href={{this.href}}
+      ...attributes
       {{on "click" this.openCollection}}
     >
       <header class="collection-tile__header">
-        <h2 class="collection-tile__name">{{emojiText this.collection.name}}</h2>
+        <span aria-hidden="true" class="collection-tile__emblem">{{dIcon
+            "layer-group"
+          }}</span>
+        <h2 class="collection-tile__name">{{emojiText
+            this.collection.name
+          }}</h2>
         {{#if this.roleLabel}}
           <span class="collection-tile__role {{this.roleClass}}">
             {{this.roleLabel}}
@@ -87,73 +114,65 @@ export default class CollectionTile extends Component {
         </p>
       {{/if}}
 
-      <div class="collection-tile__owner">
-        {{#if this.collection.owner}}
-          <DUserLink
-            class="collection-tile__owner-link"
-            @user={{this.collection.owner}}
-          >
-            {{dAvatar this.collection.owner imageSize="tiny" hideTitle=true}}
-            <span class="collection-tile__owner-name">
-              {{this.collection.owner.username}}
-            </span>
-          </DUserLink>
-        {{else}}
-          <span class="collection-tile__owner-name -unclaimed">
-            {{i18n "collections.no_owner"}}
-          </span>
-        {{/if}}
-      </div>
-
-      <div class="collection-tile__stats">
-        <span
-          class="collection-tile__stat"
-          title={{i18n "collections.stats.topic_count"}}
-        >
-          {{dIcon "layer-group"}}
-          {{dNumber this.collection.topic_count}}
-        </span>
-        <span
-          class="collection-tile__stat"
-          title={{i18n "collections.stats.subscriber_count"}}
-        >
-          {{dIcon "bookmark"}}
-          {{dNumber this.collection.subscriber_count}}
-        </span>
-        <span
-          class="collection-tile__stat"
-          title={{i18n "collections.stats.teamworker_count"}}
-        >
-          {{dIcon "user-group"}}
-          {{dNumber this.collection.teamworker_count}}
-        </span>
-      </div>
-
       <footer class="collection-tile__footer">
-        <span class="collection-tile__activity">
-          {{dIcon "clock"}}
-          {{i18n "collections.tile.created_at"}}
-          {{dFormatDate
-            this.collection.created_at
-            format="medium"
-            leaveAgo="true"
-          }}
-        </span>
-        {{#if this.collection.last_topic_added_at}}
-          <span class="collection-tile__activity">
-            {{dIcon "clock"}}
-            {{i18n "collections.tile.last_topic_added_at"}}
-            {{dFormatDate
-              this.collection.last_topic_added_at
-              format="medium"
-              leaveAgo="true"
-            }}
-          </span>
-        {{else}}
-          <span class="collection-tile__activity -none">
-            {{i18n "collections.no_topics_yet"}}
-          </span>
-        {{/if}}
+        <div class="collection-tile__owner">
+          {{#if this.collection.owner}}
+            <DUserLink
+              class="collection-tile__owner-link"
+              @user={{this.collection.owner}}
+            >
+              {{dAvatar this.collection.owner imageSize="tiny" hideTitle=true}}
+              <span class="collection-tile__owner-name">
+                {{this.collection.owner.username}}
+              </span>
+            </DUserLink>
+          {{else}}
+            <span class="collection-tile__owner-name -unclaimed">
+              {{i18n "collections.no_owner"}}
+            </span>
+          {{/if}}
+        </div>
+
+        <div class="collection-tile__meta">
+          <div class="collection-tile__stats">
+            <span
+              class="collection-tile__stat"
+              title={{i18n "collections.stats.topic_count"}}
+            >
+              {{dIcon "layer-group"}}
+              {{dNumber this.collection.topic_count}}
+            </span>
+            <span
+              class="collection-tile__stat"
+              title={{i18n "collections.stats.subscriber_count"}}
+            >
+              {{dIcon "bookmark"}}
+              {{dNumber this.collection.subscriber_count}}
+            </span>
+            <span
+              class="collection-tile__stat"
+              title={{i18n "collections.stats.teamworker_count"}}
+            >
+              {{dIcon "user-group"}}
+              {{dNumber this.collection.teamworker_count}}
+            </span>
+          </div>
+
+          {{#if this.activity}}
+            <span
+              class="collection-tile__activity"
+              title={{this.activity.label}}
+            >
+              {{dIcon this.activity.icon}}
+              <span class="sr-only">{{this.activity.label}}</span>
+              {{#if this.activity.at}}
+                {{dFormatDate this.activity.at format="medium" leaveAgo="true"}}
+              {{else}}
+                <span>{{i18n "collections.no_topics_yet"}}</span>
+              {{/if}}
+            </span>
+          {{/if}}
+        </div>
       </footer>
     </a>
   </template>
