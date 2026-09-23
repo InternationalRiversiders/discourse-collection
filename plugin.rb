@@ -17,6 +17,9 @@ end
 # Core's Notification.types is a plain, unfrozen Enum<Hash, so a plugin can append
 # its own entries in after_initialize and they flow to the site + frontend untouched.
 after_initialize do
+  UploadSecurity.register_custom_public_type("collection_avatar")
+  UploadSecurity.register_custom_public_type("collection_background")
+
   Notification.types[:collection_topic_added] = 21075
   Notification.types[:collection_invitation] = 21076
   Notification.types[:collection_invitation_accepted] = 21077

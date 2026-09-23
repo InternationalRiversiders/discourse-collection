@@ -34,6 +34,8 @@ export default class CollectionsShowRoute extends DiscourseRoute {
       lastTopicAddedAt: model.last_topic_added_at,
       // Same for the metadata a name / description edit (docs/05 §1) can rewrite.
       collectionName: model.name,
+      avatarUpload: model.avatar_upload ?? null,
+      backgroundUpload: model.background_upload ?? null,
       collectionDescription: model.description ?? "",
       deleting: false,
       pendingTopicId: null,

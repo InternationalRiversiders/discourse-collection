@@ -14,7 +14,29 @@ module DiscourseCollection
                :last_topic_added_at,
                :owner,
                :subscriber_count,
-               :is_subscribed
+               :is_subscribed,
+               :avatar_upload,
+               :background_upload
+
+    def avatar_upload
+      appearance_upload(object.avatar_upload_id)
+    end
+
+    def background_upload
+      appearance_upload(object.background_upload_id)
+    end
+
+    def appearance_upload(id)
+      upload = @options.fetch(:appearance_uploads, {})[id]
+      return if upload.nil? || upload.secure?
+
+      {
+        id: upload.id,
+        url: Discourse.store.cdn_url(upload.url),
+        width: upload.width,
+        height: upload.height,
+      }
+    end
 
     def owner
       user = @options.fetch(:owner_users, {})[object.id]

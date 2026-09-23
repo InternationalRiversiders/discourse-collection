@@ -1,7 +1,7 @@
+import { tracked } from "@glimmer/tracking";
 import Controller from "@ember/controller";
 import { action } from "@ember/object";
 import { service } from "@ember/service";
-import { tracked } from "@glimmer/tracking";
 import { popupAjaxError } from "discourse/lib/ajax-error";
 import { i18n } from "discourse-i18n";
 import CollectionOwnerCollectionsModal from "../components/modal/collection-owner-collections-modal";
@@ -63,6 +63,8 @@ export default class CollectionsShowController extends Controller {
   // are shown, so they are mirrored here for the same reason as the counters above.
   @tracked collectionName = "";
   @tracked collectionDescription = "";
+  @tracked avatarUpload = null;
+  @tracked backgroundUpload = null;
   @tracked deleting = false;
 
   // The team comes off the route model as plain JSON too, so removals are applied
@@ -180,6 +182,10 @@ export default class CollectionsShowController extends Controller {
       (!!user.moderator &&
         this.siteSettings.collection_moderators_can_manage_collections)
     );
+  }
+
+  get canManageAppearance() {
+    return this.canManageContent || this.canManageCollectionAsStaff;
   }
 
   get canManageMetadata() {
@@ -553,6 +559,8 @@ export default class CollectionsShowController extends Controller {
   // page only mirrors the two fields it renders.
   @action
   applyMetadata(collection) {
+    this.avatarUpload = collection.avatar_upload;
+    this.backgroundUpload = collection.background_upload;
     this.collectionName = collection.name;
     this.collectionDescription = collection.description;
     // The document title reads the name too, so re-collect it (the route's titleToken).

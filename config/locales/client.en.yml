@@ -14,6 +14,17 @@ en:
           discourse_collection: "Collections"
   js:
     collections:
+      appearance:
+        edit: "Avatar & background"
+        title: "Collection appearance"
+        avatar: "Collection avatar"
+        background: "Background image"
+        hint: "JPG, PNG, GIF or WebP. Use a square avatar and a wide background (about 3:1); images are cropped from the center."
+        upload: "Upload / replace"
+        remove: "Remove"
+        save: "Save"
+        uploading: "Uploading image…"
+        public_hint: "Images are displayed publicly on the collection after saving."
       nav_name: "Collections"
       nav_title: "Browse public collections"
       heading: "Collections"

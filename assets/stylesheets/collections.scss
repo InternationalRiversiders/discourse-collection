@@ -1425,3 +1425,122 @@
     }
   }
 }
+
+// Optional collection identity images; text stays on the theme's normal surface.
+.collection-tile__emblem img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.collection-tile__cover {
+  width: 100%;
+  aspect-ratio: 3 / 1;
+  object-fit: cover;
+  border-radius: var(--d-border-radius);
+}
+
+.collection-detail__cover {
+  display: block;
+  width: 100%;
+  max-height: 18rem;
+  aspect-ratio: 3 / 1;
+  object-fit: cover;
+  border-radius: var(--d-border-radius-large);
+  margin-bottom: 1rem;
+}
+
+.collection-detail__avatar {
+  flex: none;
+  width: 3.5rem;
+  height: 3.5rem;
+  object-fit: cover;
+  border-radius: var(--d-border-radius);
+}
+
+.collection-appearance {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1.25rem;
+  min-width: 0;
+
+  &__hint {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--primary-medium);
+  }
+
+  &__field {
+    min-width: 0;
+
+    h3 {
+      margin: 0 0 0.5rem;
+    }
+  }
+
+  &__preview {
+    display: grid;
+    place-items: center;
+    height: 9rem;
+    background: var(--primary-very-low);
+    border: 1px solid var(--primary-low);
+    border-radius: var(--d-border-radius);
+    overflow: hidden;
+    color: var(--tertiary);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    > .d-icon {
+      width: 2rem;
+      height: 2rem;
+    }
+  }
+
+  .--avatar &__preview {
+    width: 9rem;
+  }
+
+  &__controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  &__picker {
+    position: relative;
+    margin: 0;
+    overflow: hidden;
+
+    input[type="file"] {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    &:focus-within {
+      outline: 2px solid var(--tertiary);
+      outline-offset: 2px;
+    }
+  }
+
+  @media (width <= 600px) {
+    grid-template-columns: minmax(0, 1fr);
+
+    &__preview {
+      height: 7rem;
+    }
+
+    .--avatar &__preview {
+      width: 7rem;
+    }
+  }
+}

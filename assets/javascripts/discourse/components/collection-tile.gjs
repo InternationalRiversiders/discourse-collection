@@ -94,10 +94,17 @@ export default class CollectionTile extends Component {
       ...attributes
       {{on "click" this.openCollection}}
     >
+      {{#if this.collection.background_upload}}
+        <img alt="" class="collection-tile__cover" loading="lazy" src={{this.collection.background_upload.url}} />
+      {{/if}}
       <header class="collection-tile__header">
-        <span aria-hidden="true" class="collection-tile__emblem">{{dIcon
-            "collection"
-          }}</span>
+        <span aria-hidden="true" class="collection-tile__emblem">
+          {{#if this.collection.avatar_upload}}
+            <img alt="" loading="lazy" src={{this.collection.avatar_upload.url}} />
+          {{else}}
+            {{dIcon "collection"}}
+          {{/if}}
+        </span>
         <h2 class="collection-tile__name">{{emojiText
             this.collection.name
           }}</h2>

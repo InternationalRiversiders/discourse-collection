@@ -14,6 +14,17 @@ zh_CN:
           discourse_collection: "淘专辑"
   js:
     collections:
+      appearance:
+        edit: "头像与背景"
+        title: "编辑专辑外观"
+        avatar: "专辑头像"
+        background: "背景图"
+        hint: "支持 JPG、PNG、GIF、WebP。头像建议正方形，背景建议横图（约 3:1）；图片居中裁切展示。"
+        upload: "上传 / 更换"
+        remove: "移除"
+        save: "保存"
+        uploading: "图片上传中…"
+        public_hint: "图片用于专辑公开展示，保存后生效。"
       nav_name: "淘专辑"
       nav_title: "浏览公共淘专辑"
       heading: "淘专辑"

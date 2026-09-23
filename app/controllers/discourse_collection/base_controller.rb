@@ -80,6 +80,10 @@ module DiscourseCollection
       user = current_user
 
       {
+        appearance_uploads:
+          Upload
+            .where(id: Collection.where(id: ids).pluck(:avatar_upload_id, :background_upload_id).flatten.compact)
+            .index_by(&:id),
         teamworker_counts: Collection.co_worker_count_by_collection(ids),
         owner_users: Collection.owner_user_by_collection(ids),
         co_worker_users: Collection.co_worker_users_by_collection(ids),

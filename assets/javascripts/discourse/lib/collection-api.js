@@ -254,3 +254,11 @@ export function listSubscribers(id, options = {}) {
 export function markCollectionNotificationsRead(id) {
   return ajax(`/collections/${id}/read_notifications.json`, { type: "PUT" });
 }
+
+export function updateCollectionAppearance(id, attributes) {
+  return ajax(`/collections/${id}/appearance.json`, {
+    type: "PUT",
+    contentType: "application/json",
+    data: JSON.stringify(attributes),
+  });
+}

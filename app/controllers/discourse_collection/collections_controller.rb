@@ -15,7 +15,7 @@ module DiscourseCollection
     # enforced per action by the service policies.
     before_action :ensure_write_access,
                   only: %i[
-                    create update destroy remove_maintainer subscribe unsubscribe
+                    create update update_appearance destroy remove_maintainer subscribe unsubscribe
                     read_notifications create_invite revoke_invite accept_invite reject_invite
                     add_topic remove_topic update_collected_topic rewrite_topic_note
                   ]
@@ -97,6 +97,16 @@ module DiscourseCollection
         on_model_not_found(:collection) { raise Discourse::NotFound }
         on_failed_policy(:can_manage_metadata) { raise Discourse::InvalidAccess }
       end
+    end
+
+    def update_appearance
+      collection = find_collection(params[:id])
+      Collection::Appearance.update!(
+        collection:,
+        user: current_user,
+        attributes: params.permit(:avatar_upload_id, :background_upload_id),
+      )
+      render_collection_full(collection)
     end
 
     # docs/05 §2.1 POST /collections/:id/invites.json — issue an invitation (maintainer

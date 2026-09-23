@@ -4,6 +4,20 @@ module DiscourseCollection
   class Collection < ActiveRecord::Base
     self.table_name = "collections"
 
+    belongs_to :avatar_upload, class_name: "::Upload", optional: true
+    belongs_to :background_upload, class_name: "::Upload", optional: true
+    has_many :upload_references, as: :target, dependent: :delete_all
+
+    after_save :sync_appearance_uploads,
+               if: -> { saved_change_to_avatar_upload_id? || saved_change_to_background_upload_id? }
+
+    def sync_appearance_uploads
+      UploadReference.ensure_exist!(
+        upload_ids: [avatar_upload_id, background_upload_id],
+        target: self,
+      )
+    end
+
     # Owner is a teamworker row flagged is_owner=true (at most one per collection,
     # enforced by a partial unique index). No owner row => ownerless collection.
     has_many :collection_topics, class_name: "DiscourseCollection::CollectionTopic"

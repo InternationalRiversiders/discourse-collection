@@ -69,3 +69,5 @@ Discourse 插件：公开的「淘专辑」。
 - 仓库的开发约定与 schema 硬规则见 [CLAUDE.md](CLAUDE.md)。
 
 - HTTP API 设计见 [docs/index.md](docs/index.md)；建表迁移是 schema 的唯一事实源。
+
+[专辑头像与背景：上传、权限与附件生命周期](docs/collection-appearance.md)。

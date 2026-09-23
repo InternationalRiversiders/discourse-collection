@@ -41,6 +41,7 @@ en:
         subscriber_count: "Subscribers"
         teamworker_count: "Maintainers"
     errors:
+      invalid_appearance_upload: "Choose a public JPG, PNG, GIF or WebP image that you uploaded."
       name_blank: "A collection name is required."
       name_out_of_range: "Collection name must be between %{min} and %{max} characters."
       description_out_of_range: "Collection description must be at most %{max} characters."

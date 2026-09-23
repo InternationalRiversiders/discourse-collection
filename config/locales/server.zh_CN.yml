@@ -40,6 +40,7 @@ zh_CN:
         subscriber_count: "订阅数"
         teamworker_count: "共同维护者"
     errors:
+      invalid_appearance_upload: "请选择由你上传的公开 JPG、PNG、GIF 或 WebP 图片。"
       name_blank: "专辑名称不能为空。"
       name_out_of_range: "专辑名称长度需在 %{min} 到 %{max} 个字符之间。"
       description_out_of_range: "专辑描述不能超过 %{max} 个字符。"

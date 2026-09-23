@@ -69,3 +69,5 @@ Admission is decided by **group membership**, and only at the moment the action 
 - The repository's development conventions and schema rules are in [CLAUDE.md](CLAUDE.md).
 
 - The HTTP API design is in [docs/index.md](docs/index.md); the table-creation migration is the single source of truth for the schema.
+
+[Collection avatars and background images](docs/collection-appearance.md): upload controls, permissions and attachment lifecycle.

@@ -36,6 +36,10 @@ module DiscourseCollection
       owner? || team_worker?
     end
 
+    def can_manage_appearance?
+      owner? || team_worker? || can_manage_collection?
+    end
+
     # Admin or moderator. Guards the note-rewrite exception (docs/06 §1), which is
     # not gated by collection_moderators_can_manage_collections.
     def staff?

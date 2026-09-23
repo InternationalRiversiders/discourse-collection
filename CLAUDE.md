@@ -20,7 +20,7 @@ Discourse 插件：公开「淘专辑」/公共收藏夹。功能与使用见 [R
 
    | 表 | 索引 |
    | --- | --- |
-   | `collections` | `(created_at)`<br>`(last_topic_added_at DESC NULLS LAST)`<br>`(topic_count)`<br>`(subscribers_count)` |
+   | `collections` | `(created_at)`<br>`(last_topic_added_at DESC NULLS LAST)`<br>`(topic_count)`<br>`(subscribers_count)`<br>`(avatar_upload_id)`<br>`(background_upload_id)` |
    | `collection_topics` | `(topic_id, collection_id)`<br>`(collection_id, created_at, topic_id)` |
    | `collection_teamworkers` | `(collection_id) WHERE is_owner`（**partial unique**，owner 唯一性约束）<br>`(collection_id)`<br>`(user_id, collection_id)` |
    | `collection_topic_selected_replies` | `(collection_id, topic_id, post_id)`<br>`(topic_id)`<br>`(post_id)` |

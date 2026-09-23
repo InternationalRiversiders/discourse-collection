@@ -1,23 +1,24 @@
+import Component from "@glimmer/component";
 import { fn } from "@ember/helper";
+import { on } from "@ember/modifier";
 import { action } from "@ember/object";
 import { LinkTo } from "@ember/routing";
-import Component from "@glimmer/component";
-import { on } from "@ember/modifier";
 import { service } from "@ember/service";
+import { and, eq } from "discourse/truth-helpers";
+import dFormatDate from "discourse/ui-kit/helpers/d-format-date";
+import dIcon from "discourse/ui-kit/helpers/d-icon";
+import dNumber from "discourse/ui-kit/helpers/d-number";
+import { i18n } from "discourse-i18n";
+import { INVITE_MAINTAINER, INVITE_OWNER } from "../lib/collection-api";
+import emojiText from "../lib/emoji-text";
 import CollectionChips from "./collection-chips";
 import CollectionInviteRecords from "./collection-invite-records";
 import CollectionTopics from "./collection-topics";
 import CollectionUser from "./collection-user";
+import CollectionAppearanceModal from "./modal/collection-appearance-modal";
 import CollectionFormModal from "./modal/collection-form-modal";
 import CollectionInviteModal from "./modal/collection-invite-modal";
 import CollectionSubscribersModal from "./modal/collection-subscribers-modal";
-import dFormatDate from "discourse/ui-kit/helpers/d-format-date";
-import dIcon from "discourse/ui-kit/helpers/d-icon";
-import dNumber from "discourse/ui-kit/helpers/d-number";
-import { and, eq } from "discourse/truth-helpers";
-import { i18n } from "discourse-i18n";
-import { INVITE_MAINTAINER, INVITE_OWNER } from "../lib/collection-api";
-import emojiText from "../lib/emoji-text";
 
 export default class CollectionDetailPage extends Component {
   @service currentUser;
@@ -33,6 +34,7 @@ export default class CollectionDetailPage extends Component {
     return (
       this.args.controller.canSubscribe ||
       this.args.controller.canManageMetadata ||
+      this.args.controller.canManageAppearance ||
       this.args.controller.canDeleteCollection
     );
   }
@@ -86,6 +88,18 @@ export default class CollectionDetailPage extends Component {
 
   // docs/05 §1 — the modal writes and hands the full shape back to the controller, which
   // mirrors the two fields the page renders.
+  @action
+  editAppearance() {
+    this.modal.show(CollectionAppearanceModal, {
+      model: {
+        id: this.args.collection.id,
+        avatar_upload: this.args.controller.avatarUpload,
+        background_upload: this.args.controller.backgroundUpload,
+        onSaved: this.args.controller.applyMetadata,
+      },
+    });
+  }
+
   @action
   editMetadata() {
     this.modal.show(CollectionFormModal, {
@@ -155,7 +169,13 @@ export default class CollectionDetailPage extends Component {
         </nav>
 
         <header class="collection-detail__header">
+          {{#if @controller.backgroundUpload}}
+            <img alt="" class="collection-detail__cover" src={{@controller.backgroundUpload.url}} />
+          {{/if}}
           <div class="collection-detail__heading">
+            {{#if @controller.avatarUpload}}
+              <img alt="" class="collection-detail__avatar" src={{@controller.avatarUpload.url}} />
+            {{/if}}
             <h1 class="collection-detail__name">{{emojiText @controller.collectionName}}</h1>
             {{#if @controller.roleLabel}}
               <span class="collection-detail__role {{@controller.roleClass}}">
@@ -222,9 +242,9 @@ export default class CollectionDetailPage extends Component {
           <div class="collection-detail__actions">
             {{#if @controller.canSubscribe}}
               <button
-                type="button"
                 class="btn btn-primary collection-detail__subscribe"
                 disabled={{@controller.toggling}}
+                type="button"
                 {{on "click" @controller.toggleSubscription}}
               >
                 {{dIcon this.subscribeIcon}}
@@ -234,8 +254,8 @@ export default class CollectionDetailPage extends Component {
 
             {{#if this.canViewSubscribers}}
               <button
-                type="button"
                 class="btn collection-detail__subscribers"
+                type="button"
                 {{on "click" this.viewSubscribers}}
               >
                 {{dIcon "bookmark"}}
@@ -243,10 +263,17 @@ export default class CollectionDetailPage extends Component {
               </button>
             {{/if}}
 
+            {{#if @controller.canManageAppearance}}
+              <button class="btn collection-detail__appearance" type="button" {{on "click" this.editAppearance}}>
+                {{dIcon "image"}}
+                {{i18n "collections.appearance.edit"}}
+              </button>
+            {{/if}}
+
             {{#if @controller.canManageMetadata}}
               <button
-                type="button"
                 class="btn collection-detail__edit"
+                type="button"
                 {{on "click" this.editMetadata}}
               >
                 {{dIcon "pencil"}}
@@ -256,8 +283,8 @@ export default class CollectionDetailPage extends Component {
 
             {{#if @controller.canInviteMaintainer}}
               <button
-                type="button"
                 class="btn collection-detail__invite-maintainer"
+                type="button"
                 {{on "click" this.inviteMaintainer}}
               >
                 {{dIcon "user-plus"}}
@@ -267,8 +294,8 @@ export default class CollectionDetailPage extends Component {
 
             {{#if @controller.canInviteOwner}}
               <button
-                type="button"
                 class="btn collection-detail__invite-owner"
+                type="button"
                 {{on "click" this.inviteOwner}}
               >
                 {{dIcon "user-shield"}}
@@ -278,9 +305,9 @@ export default class CollectionDetailPage extends Component {
 
             {{#if @controller.canDeleteCollection}}
               <button
-                type="button"
                 class="btn btn-danger collection-detail__delete"
                 disabled={{@controller.deleting}}
+                type="button"
                 {{on "click" @controller.destroyCollection}}
               >
                 {{dIcon "trash-can"}}
@@ -300,8 +327,8 @@ export default class CollectionDetailPage extends Component {
 
             <CollectionChips @collections={{@controller.ownerCollections}}>
               <button
-                type="button"
                 class="collection-chips__chip btn btn-primary"
+                type="button"
                 {{on "click" @controller.openOwnerCollections}}
               >
                 {{this.ownerCollectionsButtonLabel}}
@@ -345,12 +372,12 @@ export default class CollectionDetailPage extends Component {
 
                   {{#if @controller.canManageMaintainers}}
                     <button
-                      type="button"
                       class="btn btn-danger btn-small collection-detail__team-action"
                       disabled={{eq
                         @controller.pendingMaintainerId
                         maintainer.id
                       }}
+                      type="button"
                       {{on
                         "click"
                         (fn @controller.removeMaintainer maintainer)
@@ -365,12 +392,12 @@ export default class CollectionDetailPage extends Component {
                     )
                   }}
                     <button
-                      type="button"
                       class="btn btn-danger btn-small collection-detail__team-action"
                       disabled={{eq
                         @controller.pendingMaintainerId
                         maintainer.id
                       }}
+                      type="button"
                       {{on "click" @controller.leaveCollection}}
                     >
                       {{i18n "collections.team.leave"}}
