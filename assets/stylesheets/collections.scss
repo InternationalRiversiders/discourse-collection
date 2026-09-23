@@ -1518,6 +1518,7 @@
     overflow: hidden;
 
     input[type="file"] {
+      display: block;
       position: absolute;
       inset: 0;
       width: 100%;
