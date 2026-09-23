@@ -1565,3 +1565,18 @@
   align-items: center;
   gap: 0.5rem;
 }
+
+.collection-form-panel[hidden] {
+  display: none;
+}
+
+.collection-form__tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+
+  [aria-pressed="true"] {
+    color: var(--secondary);
+    background: var(--tertiary);
+  }
+}

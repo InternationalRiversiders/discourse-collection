@@ -1,13 +1,18 @@
-import { action } from "@ember/object";
-import { on } from "@ember/modifier";
-import { service } from "@ember/service";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
+import { fn } from "@ember/helper";
+import { on } from "@ember/modifier";
+import { action } from "@ember/object";
+import { service } from "@ember/service";
 import { popupAjaxError } from "discourse/lib/ajax-error";
+import { or } from "discourse/truth-helpers";
+import DButton from "discourse/ui-kit/d-button";
 import DModal from "discourse/ui-kit/d-modal";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
 import { i18n } from "discourse-i18n";
 import { createCollection, updateCollection } from "../../lib/collection-api";
+import CollectionAppearanceEditor from "../collection-appearance-editor";
+import CollectionAppearanceFields from "../collection-appearance-fields";
 
 // The one form behind both writes on a collection: creating it (docs/03 §2) and
 // renaming / re-describing it (docs/05 §1). Fields, limits and layout are identical, so
@@ -20,10 +25,30 @@ export default class CollectionFormModal extends Component {
   @service router;
   @service siteSettings;
 
+  @tracked editingAppearance = this.args.model.canManageMetadata === false;
   @tracked description = this.args.model.description ?? "";
   @tracked name = this.args.model.name ?? "";
+  @tracked savedName = this.args.model.name ?? "";
+  @tracked savedDescription = this.args.model.description ?? "";
+  @tracked saveNotice = "";
   @tracked showErrors = false;
   @tracked submitting = false;
+
+  get hasMetadataChanges() {
+    return (
+      this.showMetadata &&
+      (this.name.trim() !== this.savedName ||
+        this.description !== this.savedDescription)
+    );
+  }
+
+  get showAppearance() {
+    return !this.isCreate && this.args.model.canManageAppearance;
+  }
+
+  get showMetadata() {
+    return this.isCreate || this.args.model.canManageMetadata !== false;
+  }
 
   get #keyPrefix() {
     return `collections.${this.args.model.mode}`;
@@ -59,7 +84,9 @@ export default class CollectionFormModal extends Component {
   }
 
   get submitLabel() {
-    return i18n(`${this.#keyPrefix}.submit`);
+    return this.showAppearance
+      ? i18n("collections.edit.save_metadata")
+      : i18n(`${this.#keyPrefix}.submit`);
   }
 
   get isCreate() {
@@ -102,8 +129,16 @@ export default class CollectionFormModal extends Component {
   }
 
   @action
+  selectEditor(appearance) {
+    this.editingAppearance = appearance;
+    this.saveNotice = "";
+  }
+
+  @action
   close() {
-    this.args.closeModal?.();
+    if (!this.submitting) {
+      this.args.closeModal?.();
+    }
   }
 
   @action
@@ -117,7 +152,11 @@ export default class CollectionFormModal extends Component {
   }
 
   @action
-  async submit() {
+  async submit(images) {
+    if (this.submitting || images.uploading || !this.showMetadata) {
+      return;
+    }
+    this.saveNotice = "";
     this.showErrors = true;
     if (this.nameError || this.descriptionError) {
       return;
@@ -127,11 +166,27 @@ export default class CollectionFormModal extends Component {
     try {
       const collection = await this.#write();
       this.#finished(collection);
-      this.close();
+      this.savedName = collection.name;
+      this.savedDescription = collection.description ?? "";
+      if (Object.keys(images.changes).length === 0) {
+        this.args.closeModal?.();
+      } else {
+        this.saveNotice = i18n("collections.edit.metadata_saved");
+      }
     } catch (err) {
       popupAjaxError(err);
     } finally {
       this.submitting = false;
+    }
+  }
+
+  @action
+  appearanceSaved(collection) {
+    this.args.model.onSaved?.(collection);
+    if (!this.hasMetadataChanges) {
+      this.args.closeModal?.();
+    } else {
+      this.saveNotice = i18n("collections.edit.images_saved");
     }
   }
 
@@ -160,73 +215,141 @@ export default class CollectionFormModal extends Component {
   }
 
   <template>
-    <DModal @closeModal={{this.close}} @title={{this.title}}>
-      <:body>
-        <div class="collection-form">
-          <label class="collection-form__field" for="collection-form-name">
-            <span class="collection-form__label">{{this.nameLabel}}</span>
-            <input
-              id="collection-form-name"
-              class="collection-form__input"
-              maxlength={{this.nameMax}}
-              type="text"
-              value={{this.name}}
-              {{on "input" this.updateName}}
-            />
-            <span class="collection-form__hint">{{this.nameConstraint}}</span>
-            {{#if this.showErrors}}
-              {{#if this.nameError}}
-                <p class="collection-form__error">{{this.nameError}}</p>
-              {{/if}}
+    <CollectionAppearanceEditor
+      @closeModal={{this.close}}
+      @enabled={{this.showAppearance}}
+      @model={{@model}}
+      @onSaved={{this.appearanceSaved}}
+      as |images|
+    >
+      <DModal @closeModal={{images.close}} @title={{this.title}}>
+        <:body>
+          {{#if this.showAppearance}}
+            {{#if this.showMetadata}}
+              <div
+                aria-label={{this.title}}
+                class="collection-form__tabs"
+                role="group"
+              >
+                <DButton
+                  aria-pressed={{if this.editingAppearance "false" "true"}}
+                  @action={{fn this.selectEditor false}}
+                  @disabled={{or this.submitting images.saving}}
+                  @label="collections.edit.basic_info"
+                />
+                <DButton
+                  aria-pressed={{if this.editingAppearance "true" "false"}}
+                  @action={{fn this.selectEditor true}}
+                  @disabled={{or this.submitting images.saving}}
+                  @label="collections.appearance.edit"
+                />
+              </div>
             {{/if}}
-          </label>
-
-          <label class="collection-form__field" for="collection-form-description">
-            <span class="collection-form__label">
-              {{this.descriptionLabel}}
-            </span>
-            <textarea
-              id="collection-form-description"
-              class="collection-form__textarea"
-              maxlength={{this.descriptionMax}}
-              rows="3"
-              value={{this.description}}
-              {{on "input" this.updateDescription}}
-            ></textarea>
-            <span class="collection-form__hint">
-              {{this.descriptionConstraint}}
-            </span>
-            {{#if this.showErrors}}
-              {{#if this.descriptionError}}
-                <p class="collection-form__error">
-                  {{this.descriptionError}}
-                </p>
-              {{/if}}
-            {{/if}}
-          </label>
-        </div>
-      </:body>
-
-      <:footer>
-        <button
-          type="button"
-          class="btn collection-form__cancel"
-          {{on "click" this.close}}
-        >
-          {{this.cancelLabel}}
-        </button>
-        <button
-          type="button"
-          class="btn btn-primary collection-form__submit"
-          disabled={{this.submitting}}
-          {{on "click" this.submit}}
-        >
-          {{#if this.isCreate}}
-            {{dIcon "plus"}}
+            <div
+              class="collection-form-panel"
+              hidden={{if this.editingAppearance false true}}
+            >
+              <CollectionAppearanceFields @editor={{images}} />
+            </div>
           {{/if}}
-          {{this.submitLabel}}
-        </button>
-      </:footer>
-    </DModal>
+          {{#if this.showMetadata}}
+            <div
+              class="collection-form collection-form-panel"
+              hidden={{this.editingAppearance}}
+            >
+              <label class="collection-form__field" for="collection-form-name">
+                <span class="collection-form__label">{{this.nameLabel}}</span>
+                <input
+                  class="collection-form__input"
+                  disabled={{this.submitting}}
+                  id="collection-form-name"
+                  maxlength={{this.nameMax}}
+                  type="text"
+                  value={{this.name}}
+                  {{on "input" this.updateName}}
+                />
+                <span
+                  class="collection-form__hint"
+                >{{this.nameConstraint}}</span>
+                {{#if this.showErrors}}
+                  {{#if this.nameError}}
+                    <p class="collection-form__error">{{this.nameError}}</p>
+                  {{/if}}
+                {{/if}}
+              </label>
+
+              <label
+                class="collection-form__field"
+                for="collection-form-description"
+              >
+                <span class="collection-form__label">
+                  {{this.descriptionLabel}}
+                </span>
+                <textarea
+                  class="collection-form__textarea"
+                  disabled={{this.submitting}}
+                  id="collection-form-description"
+                  maxlength={{this.descriptionMax}}
+                  rows="3"
+                  value={{this.description}}
+                  {{on "input" this.updateDescription}}
+                ></textarea>
+                <span class="collection-form__hint">
+                  {{this.descriptionConstraint}}
+                </span>
+                {{#if this.showErrors}}
+                  {{#if this.descriptionError}}
+                    <p class="collection-form__error">
+                      {{this.descriptionError}}
+                    </p>
+                  {{/if}}
+                {{/if}}
+              </label>
+            </div>
+          {{/if}}
+          {{#if this.saveNotice}}
+            <p
+              class="collection-form__save-notice"
+              role="status"
+            >{{this.saveNotice}}</p>
+          {{/if}}
+        </:body>
+
+        <:footer>
+          {{#if this.editingAppearance}}
+            <DButton
+              class="btn-primary collection-appearance__save"
+              @action={{images.save}}
+              @disabled={{images.saveDisabled}}
+              @label="collections.edit.save_images"
+            />
+            <DButton
+              @action={{images.close}}
+              @disabled={{images.saving}}
+              @label="cancel"
+            />
+          {{else}}
+            <button
+              class="btn collection-form__cancel"
+              type="button"
+              {{on "click" this.close}}
+            >
+              {{this.cancelLabel}}
+            </button>
+            <button
+              class="btn btn-primary collection-form__submit"
+              disabled={{or this.submitting images.uploading}}
+              type="button"
+              {{on "click" (fn this.submit images)}}
+            >
+              {{#if this.isCreate}}
+                {{dIcon "plus"}}
+              {{/if}}
+              {{this.submitLabel}}
+            </button>
+          {{/if}}
+        </:footer>
+      </DModal>
+    </CollectionAppearanceEditor>
   </template>
 }

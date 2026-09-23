@@ -89,6 +89,11 @@ en:
       # Renaming / re-describing an existing collection (docs/05 §1). Same fields and
       # limits as creating one, so the wording mirrors collections.create.
       edit:
+        save_metadata: "Save basic information"
+        save_images: "Save avatar and background"
+        metadata_saved: "Basic information saved. Avatar and background changes are still unsaved."
+        images_saved: "Avatar and background saved. Basic information changes are still unsaved."
+        basic_info: "Basic information"
         title: "Edit collection"
         name_label: "Name"
         description_label: "Description (optional)"

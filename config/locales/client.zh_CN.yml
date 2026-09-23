@@ -79,6 +79,11 @@ zh_CN:
           name_length: "名称长度须在 %{min}–%{max} 个字符之间。"
           description_too_long: "简介不能超过 %{max} 个字符。"
       edit:
+        save_metadata: "保存基本信息"
+        save_images: "保存头像与背景"
+        metadata_saved: "基本信息已保存，头像与背景仍有未保存的修改。"
+        images_saved: "头像与背景已保存，基本信息仍有未保存的修改。"
+        basic_info: "基本信息"
         title: "编辑淘专辑"
         name_label: "名称"
         description_label: "简介（可选）"

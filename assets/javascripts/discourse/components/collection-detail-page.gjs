@@ -15,7 +15,6 @@ import CollectionChips from "./collection-chips";
 import CollectionInviteRecords from "./collection-invite-records";
 import CollectionTopics from "./collection-topics";
 import CollectionUser from "./collection-user";
-import CollectionAppearanceModal from "./modal/collection-appearance-modal";
 import CollectionFormModal from "./modal/collection-form-modal";
 import CollectionInviteModal from "./modal/collection-invite-modal";
 import CollectionSubscribersModal from "./modal/collection-subscribers-modal";
@@ -86,25 +85,15 @@ export default class CollectionDetailPage extends Component {
     return i18n("collections.owner_collections.details");
   }
 
-  // docs/05 §1 — the modal writes and hands the full shape back to the controller, which
-  // mirrors the two fields the page renders.
-  @action
-  editAppearance() {
-    this.modal.show(CollectionAppearanceModal, {
-      model: {
-        id: this.args.collection.id,
-        avatar_upload: this.args.controller.avatarUpload,
-        background_upload: this.args.controller.backgroundUpload,
-        onSaved: this.args.controller.applyMetadata,
-      },
-    });
-  }
-
   @action
   editMetadata() {
     this.modal.show(CollectionFormModal, {
       model: {
         mode: "edit",
+        canManageMetadata: this.args.controller.canManageMetadata,
+        canManageAppearance: this.args.controller.canManageAppearance,
+        avatar_upload: this.args.controller.avatarUpload,
+        background_upload: this.args.controller.backgroundUpload,
         id: this.args.collection.id,
         name: this.args.controller.collectionName,
         description: this.args.controller.collectionDescription,
@@ -170,13 +159,23 @@ export default class CollectionDetailPage extends Component {
 
         <header class="collection-detail__header">
           {{#if @controller.backgroundUpload}}
-            <img alt="" class="collection-detail__cover" src={{@controller.backgroundUpload.url}} />
+            <img
+              alt=""
+              class="collection-detail__cover"
+              src={{@controller.backgroundUpload.url}}
+            />
           {{/if}}
           <div class="collection-detail__heading">
             {{#if @controller.avatarUpload}}
-              <img alt="" class="collection-detail__avatar" src={{@controller.avatarUpload.url}} />
+              <img
+                alt=""
+                class="collection-detail__avatar"
+                src={{@controller.avatarUpload.url}}
+              />
             {{/if}}
-            <h1 class="collection-detail__name">{{emojiText @controller.collectionName}}</h1>
+            <h1 class="collection-detail__name">{{emojiText
+                @controller.collectionName
+              }}</h1>
             {{#if @controller.roleLabel}}
               <span class="collection-detail__role {{@controller.roleClass}}">
                 {{@controller.roleLabel}}
@@ -264,13 +263,6 @@ export default class CollectionDetailPage extends Component {
             {{/if}}
 
             {{#if @controller.canManageAppearance}}
-              <button class="btn collection-detail__appearance" type="button" {{on "click" this.editAppearance}}>
-                {{dIcon "image"}}
-                {{i18n "collections.appearance.edit"}}
-              </button>
-            {{/if}}
-
-            {{#if @controller.canManageMetadata}}
               <button
                 class="btn collection-detail__edit"
                 type="button"
@@ -413,7 +405,10 @@ export default class CollectionDetailPage extends Component {
           <CollectionInviteRecords @controller={{@controller}} />
         {{/if}}
 
-        <CollectionTopics @collection={{@collection}} @controller={{@controller}} />
+        <CollectionTopics
+          @collection={{@collection}}
+          @controller={{@controller}}
+        />
       </div>
     </section>
   </template>
