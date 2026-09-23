@@ -96,7 +96,7 @@ export default class CollectionTile extends Component {
     >
       <header class="collection-tile__header">
         <span aria-hidden="true" class="collection-tile__emblem">{{dIcon
-            "layer-group"
+            "collection"
           }}</span>
         <h2 class="collection-tile__name">{{emojiText
             this.collection.name
