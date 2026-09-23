@@ -242,8 +242,8 @@
 
   &__footer {
     display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+    align-items: center;
+    gap: 0.65rem;
     margin-top: auto;
     padding-top: 0.75rem;
     border-top: 1px solid var(--primary-low);
@@ -252,8 +252,9 @@
 
   &__owner {
     display: flex;
+    flex: 0 1 auto;
     align-items: center;
-    gap: 0.4rem;
+    min-width: 1.5rem;
   }
 
   // Face and name are one link, so either opens the card; the tile around them is a
@@ -262,7 +263,13 @@
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
+    min-width: 0;
+    max-width: 100%;
     text-decoration: none;
+
+    .avatar {
+      flex: none;
+    }
 
     &:link,
     &:visited {
@@ -275,7 +282,10 @@
   }
 
   &__owner-name {
-    overflow-wrap: anywhere;
+    overflow: hidden;
+    min-width: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     color: var(--primary-high);
 
     &.-unclaimed {
@@ -286,16 +296,15 @@
 
   &__meta {
     display: flex;
-    flex-wrap: wrap;
+    flex: none;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem 1rem;
+    gap: 0.65rem;
+    white-space: nowrap;
   }
 
   &__stats {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.9rem;
+    gap: 0.65rem;
   }
 
   &__stat {

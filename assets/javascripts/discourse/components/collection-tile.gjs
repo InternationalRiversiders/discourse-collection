@@ -122,7 +122,10 @@ export default class CollectionTile extends Component {
               @user={{this.collection.owner}}
             >
               {{dAvatar this.collection.owner imageSize="tiny" hideTitle=true}}
-              <span class="collection-tile__owner-name">
+              <span
+                class="collection-tile__owner-name"
+                title={{this.collection.owner.username}}
+              >
                 {{this.collection.owner.username}}
               </span>
             </DUserLink>
