@@ -15,7 +15,7 @@ module DiscourseCollection
     # enforced per action by the service policies.
     before_action :ensure_write_access,
                   only: %i[
-                    create update update_appearance destroy remove_maintainer subscribe unsubscribe
+                    create update update_appearance update_reading_defaults destroy remove_maintainer subscribe unsubscribe
                     read_notifications create_invite revoke_invite accept_invite reject_invite
                     add_topic remove_topic update_collected_topic rewrite_topic_note
                   ]
@@ -96,6 +96,15 @@ module DiscourseCollection
         on_failed_contract { |contract| render_error_response(contract.errors.full_messages) }
         on_model_not_found(:collection) { raise Discourse::NotFound }
         on_failed_policy(:can_manage_metadata) { raise Discourse::InvalidAccess }
+      end
+    end
+
+    def update_reading_defaults
+      Collection::UpdateReadingDefaults.call(service_params) do
+        on_success { |collection:| render_collection_full(collection) }
+        on_failed_contract { |contract| render_error_response(contract.errors.full_messages) }
+        on_model_not_found(:collection) { raise Discourse::NotFound }
+        on_failed_policy(:can_manage_reading_defaults) { raise Discourse::InvalidAccess }
       end
     end
 
@@ -421,7 +430,7 @@ module DiscourseCollection
 
     # docs/04 §1 GET /collections/:id/topics.json — the collection reading page (core read
     # endpoint). Paginates the collected topics ordered by one of three keys (whitelist
-    # below, default added_at desc): the collection time, the topic's own creation time or
+    # below, with per-collection defaults): the collection time, the topic's own creation time or
     # its latest activity — the latter two live on the joined topics row. Every key carries
     # collection_topics.topic_id as a same-direction tie-breaker, so paging stays stable
     # when two rows share a value. The paging window is narrowed in SQL to the topics the
@@ -444,7 +453,11 @@ module DiscourseCollection
       collection = find_collection(params[:id])
       page, page_size = pagination_params
 
-      sort, order = sort_and_order(allowed: TOPIC_SORT_COLUMNS, default: TOPIC_SORT_DEFAULT)
+      sort, order = sort_and_order(
+        allowed: TOPIC_SORT_COLUMNS,
+        default: collection.default_topic_sort,
+        default_order: collection.default_topic_order,
+      )
       scope =
         CollectionTopic
           .where(collection_id: collection.id)
@@ -563,9 +576,8 @@ module DiscourseCollection
 
     # Sortable keys for the reading page (docs/04 §1). All three columns are NOT NULL, so
     # unlike the list endpoints there is no null placement to decide.
-    TOPIC_SORT_COLUMNS = %w[added_at topic_created_at topic_bumped_at].freeze
+    TOPIC_SORT_COLUMNS = Collection::TOPIC_SORT_FIELDS
 
-    TOPIC_SORT_DEFAULT = "added_at"
 
     # API sort key mapped to the column it orders by: the membership's own created_at, or
     # a topics column reached through the join #topics always makes. `bumped_at` is core's

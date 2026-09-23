@@ -184,6 +184,9 @@ en:
         to_be: "to be %{role}"
         confirm_revoke: "Revoke the invitation to @%{username}?"
       reading:
+        set_default: "Set as default"
+        current_default: "Current default"
+        default_hint: "Use this sort field and direction when anyone opens this collection"
         heading: "Collected topics"
         sort_label: "Sort topics"
         # One label per sortable key (docs/04 §1); the reading feed's own set.

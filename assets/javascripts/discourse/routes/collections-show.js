@@ -1,7 +1,10 @@
 import { service } from "@ember/service";
 import DiscourseRoute from "discourse/routes/discourse";
 import { i18n } from "discourse-i18n";
-import { getCollection, markCollectionNotificationsRead } from "../lib/collection-api";
+import {
+  getCollection,
+  markCollectionNotificationsRead,
+} from "../lib/collection-api";
 import { shouldMarkCollectionNotificationsRead } from "../lib/collection-notifications";
 import { READING_SORT_DEFAULT } from "../lib/reading-sort";
 
@@ -60,8 +63,11 @@ export default class CollectionsShowRoute extends DiscourseRoute {
       topics: [],
       users: {},
       topicsMeta: { page: 0, page_size: 30, more: false, total: 0 },
-      topicsOrder: "desc",
-      topicsSort: READING_SORT_DEFAULT,
+      defaultTopicOrder: model.default_topic_order ?? "desc",
+      defaultTopicSort: model.default_topic_sort ?? READING_SORT_DEFAULT,
+      savingReadingDefaults: false,
+      topicsOrder: model.default_topic_order ?? "desc",
+      topicsSort: model.default_topic_sort ?? READING_SORT_DEFAULT,
       loadingTopics: false,
       loadingMoreTopics: false,
     });

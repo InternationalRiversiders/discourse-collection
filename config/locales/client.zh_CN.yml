@@ -160,6 +160,9 @@ zh_CN:
         to_be: "为%{role}"
         confirm_revoke: "撤销对 @%{username} 的邀请？"
       reading:
+        set_default: "设为默认"
+        current_default: "当前默认"
+        default_hint: "将当前排序方式和方向设为所有读者进入此专辑时的默认排序"
         heading: "收录的话题"
         sort_label: "排序话题"
         sort:

@@ -245,7 +245,9 @@ export function unsubscribeFromCollection(id) {
 // site's call — collection_subscribers_visibility names the minimum role, judged against
 // this collection (lib/subscriber-visibility.js is the page's copy of that rule).
 export function listSubscribers(id, options = {}) {
-  return ajax(`/collections/${id}/subscribers.json`, { data: pageData(options) });
+  return ajax(`/collections/${id}/subscribers.json`, {
+    data: pageData(options),
+  });
 }
 
 // docs/09 §1 mark the caller's unread notifications about this collection as read. Sent
@@ -253,6 +255,13 @@ export function listSubscribers(id, options = {}) {
 // that opens per type rather than per collection, so a no-op 200 is an ordinary outcome.
 export function markCollectionNotificationsRead(id) {
   return ajax(`/collections/${id}/read_notifications.json`, { type: "PUT" });
+}
+
+export function updateCollectionReadingDefaults(id, defaults) {
+  return ajax(`/collections/${id}/reading_defaults.json`, {
+    type: "PUT",
+    data: defaults,
+  });
 }
 
 export function updateCollectionAppearance(id, attributes) {

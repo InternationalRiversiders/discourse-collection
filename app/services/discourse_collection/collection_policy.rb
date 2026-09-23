@@ -36,6 +36,10 @@ module DiscourseCollection
       owner? || team_worker?
     end
 
+    def can_manage_reading_defaults?
+      owner? || team_worker? || can_manage_collection?
+    end
+
     def can_manage_appearance?
       owner? || team_worker? || can_manage_collection?
     end

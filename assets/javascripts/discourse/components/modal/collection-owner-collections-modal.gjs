@@ -1,15 +1,16 @@
-import { action } from "@ember/object";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
+import { action } from "@ember/object";
 import didInsert from "@ember/render-modifiers/modifiers/did-insert";
+import { popupAjaxError } from "discourse/lib/ajax-error";
 import DConditionalLoadingSpinner from "discourse/ui-kit/d-conditional-loading-spinner";
 import DLoadMore from "discourse/ui-kit/d-load-more";
 import DModal from "discourse/ui-kit/d-modal";
-import { popupAjaxError } from "discourse/lib/ajax-error";
 import { i18n } from "discourse-i18n";
+import { listCollections } from "../../lib/collection-api";
+import cardMasonry from "../../modifiers/card-masonry";
 import CollectionRoleHint from "../collection-role-hint";
 import CollectionTile from "../collection-tile";
-import { listCollections } from "../../lib/collection-api";
 
 // Everything one user created or maintains (docs/03 §3), rendered as the same tiles the
 // /collections page shows. Opened from the owner chips block on a collection page, which
@@ -108,7 +109,10 @@ export default class CollectionOwnerCollectionsModal extends Component {
               @enabled={{this.canLoadMore}}
               @isLoading={{this.loadingMore}}
             >
-              <div class="collection-list__grid">
+              <div
+                class="collection-list__grid"
+                {{cardMasonry ".collection-tile"}}
+              >
                 {{#each this.collections as |collection|}}
                   {{! The modal outlives the route change, so the tile takes it down on
                   the way to the collection it points at. }}

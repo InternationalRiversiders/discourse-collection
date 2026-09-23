@@ -19,6 +19,7 @@ import {
   subscribeToCollection,
   unselectReplyFromCollection,
   unsubscribeFromCollection,
+  updateCollectionReadingDefaults,
   updateTopicNote,
 } from "../lib/collection-api";
 import { confirmAction } from "../lib/confirm";
@@ -93,6 +94,9 @@ export default class CollectionsShowController extends Controller {
 
   @tracked topics = [];
   @tracked topicsMeta = { page: 0, page_size: 30, more: false, total: 0 };
+  @tracked defaultTopicOrder = "desc";
+  @tracked defaultTopicSort = READING_SORT_DEFAULT;
+  @tracked savingReadingDefaults = false;
   @tracked topicsOrder = "desc";
   @tracked topicsSort = READING_SORT_DEFAULT;
   // uid -> user, the feed's author source (the responses' top-level `users` map,
@@ -281,7 +285,30 @@ export default class CollectionsShowController extends Controller {
   }
 
   get canLoadMoreTopics() {
-    return this.topicsMeta.more && !this.loadingTopics && !this.loadingMoreTopics;
+    return (
+      this.topicsMeta.more && !this.loadingTopics && !this.loadingMoreTopics
+    );
+  }
+
+  get canManageReadingDefaults() {
+    return this.canManageContent || this.canManageCollectionAsStaff;
+  }
+
+  get isDefaultTopicsSort() {
+    return (
+      this.topicsSort === this.defaultTopicSort &&
+      this.topicsOrder === this.defaultTopicOrder
+    );
+  }
+
+  get savingDefaultsDisabled() {
+    return this.savingReadingDefaults || this.isDefaultTopicsSort;
+  }
+
+  get saveDefaultsLabel() {
+    return this.isDefaultTopicsSort
+      ? "collections.reading.current_default"
+      : "collections.reading.set_default";
   }
 
   get topicsSortFields() {
@@ -325,6 +352,34 @@ export default class CollectionsShowController extends Controller {
 
   // Both sort controls refetch page 0: loadTopics bumps the request sequence, so a
   // load-more still in flight from the previous ordering is dropped rather than appended.
+  @action
+  async saveReadingDefaults() {
+    if (!this.canManageReadingDefaults || this.savingDefaultsDisabled) {
+      return;
+    }
+    const model = this.model;
+    this.savingReadingDefaults = true;
+    try {
+      const collection = await updateCollectionReadingDefaults(model.id, {
+        default_topic_sort: this.topicsSort,
+        default_topic_order: this.topicsOrder,
+      });
+      if (this.model !== model || this.isDestroying) {
+        return;
+      }
+      this.defaultTopicSort = collection.default_topic_sort;
+      this.defaultTopicOrder = collection.default_topic_order;
+    } catch (err) {
+      if (this.model === model && !this.isDestroying) {
+        popupAjaxError(err);
+      }
+    } finally {
+      if (this.model === model && !this.isDestroying) {
+        this.savingReadingDefaults = false;
+      }
+    }
+  }
+
   @action
   async changeTopicsSort(field) {
     if (this.topicsSort === field) {
@@ -676,7 +731,10 @@ export default class CollectionsShowController extends Controller {
   async #confirmCascadeRemoval(row, count) {
     while (true) {
       const result = await this.modal.show(RemoveTopicModal, {
-        model: { messageKey: "collections.reading.confirm_remove_topic", count },
+        model: {
+          messageKey: "collections.reading.confirm_remove_topic",
+          count,
+        },
       });
 
       if (!result?.viewReplies) {

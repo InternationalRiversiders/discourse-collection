@@ -4,6 +4,12 @@ module DiscourseCollection
   class Collection < ActiveRecord::Base
     self.table_name = "collections"
 
+    TOPIC_SORT_FIELDS = %w[added_at topic_created_at topic_bumped_at].freeze
+    TOPIC_ORDERS = %w[asc desc].freeze
+
+    validates :default_topic_sort, inclusion: { in: TOPIC_SORT_FIELDS }
+    validates :default_topic_order, inclusion: { in: TOPIC_ORDERS }
+
     belongs_to :avatar_upload, class_name: "::Upload", optional: true
     belongs_to :background_upload, class_name: "::Upload", optional: true
     has_many :upload_references, as: :target, dependent: :delete_all

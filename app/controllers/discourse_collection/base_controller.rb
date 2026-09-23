@@ -60,11 +60,11 @@ module DiscourseCollection
 
     # --- sort/order (docs/01 §7): unknown sort or order -> 400 ---
 
-    def sort_and_order(allowed:, default:)
+    def sort_and_order(allowed:, default:, default_order: "desc")
       sort = params[:sort].presence || default
       raise Discourse::InvalidParameters.new(:sort) unless allowed.include?(sort)
 
-      order = params[:order].presence || "desc"
+      order = params[:order].presence || default_order
       raise Discourse::InvalidParameters.new(:order) unless %w[asc desc].include?(order)
 
       [sort, order]

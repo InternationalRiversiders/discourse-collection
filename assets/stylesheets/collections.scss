@@ -94,7 +94,7 @@
       minmax(min(100%, max(18rem, calc(50% - 0.5rem))), 1fr)
     );
     gap: 1rem;
-    align-items: stretch;
+    align-items: start;
   }
 }
 
@@ -772,6 +772,7 @@
 
   &__header {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
@@ -1544,4 +1545,23 @@
       width: 7rem;
     }
   }
+}
+
+.collection-list__grid.is-card-masonry {
+  grid-auto-rows: 1px;
+  grid-auto-flow: row;
+  row-gap: 0;
+  align-items: start;
+
+  > * {
+    grid-row-end: span var(--card-row-span, 1);
+    align-self: start;
+  }
+}
+
+.collection-topics__sorting {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
 }

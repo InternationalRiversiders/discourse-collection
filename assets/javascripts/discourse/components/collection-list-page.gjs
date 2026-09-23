@@ -3,6 +3,7 @@ import DConditionalLoadingSpinner from "discourse/ui-kit/d-conditional-loading-s
 import DEmptyState from "discourse/ui-kit/d-empty-state";
 import DLoadMore from "discourse/ui-kit/d-load-more";
 import { i18n } from "discourse-i18n";
+import cardMasonry from "../modifiers/card-masonry";
 import CollectionCreateButton from "./collection-create-button";
 import CollectionRoleHint from "./collection-role-hint";
 import CollectionSortBar from "./collection-sort-bar";
@@ -81,7 +82,10 @@ export default class CollectionListPage extends Component {
           @isLoading={{@controller.loadingMore}}
         >
           {{#if @controller.collections.length}}
-            <div class="collection-list__grid">
+            <div
+              class="collection-list__grid"
+              {{cardMasonry ".collection-tile"}}
+            >
               {{#each @controller.collections as |collection|}}
                 <CollectionTile
                   @collection={{collection}}
